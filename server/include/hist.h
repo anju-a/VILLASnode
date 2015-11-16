@@ -21,24 +21,34 @@ typedef unsigned hist_cnt_t;
 
 /** Histogram structure used to collect statistics. */
 struct hist {
-	double resolution;	/**< The distance between two adjacent buckets. */
-	
-	double high;		/**< The value of the highest bucket. */
-	double low;		/**< The value of the lowest bucket. */
-	
+
+	/** All-time statistics @{ */
 	double highest;		/**< The highest value observed (may be higher than #high). */
 	double lowest;		/**< The lowest value observed (may be lower than #low). */
 	double last;		/**< The last value which has been put into the buckets */
 	
-	int length;		/**< The number of buckets in #data. */
+	double _m[2], _s[2];	/**< Private variables for online variance calculation */
+	/** @} */
+	
+	/** Moving window statistics @{ */
+	double mw_highest;	/**< The highest value observed (may be higher than #high). */
+	double mw_lowest;	/**< The lowest value observed (may be lower than #low). */
+	double mw_last;		/**< The last value which has been put into the buckets */
+	
+	double _mv_m[2], _mv_s[2]; /**< Private variables for online variance calculation */
+	/** @} */
+
+	double resolution;	/**< The distance between two adjacent buckets. */
+	
+	double high;		/**< The value of the highest bucket. */
+	double low;		/**< The value of the lowest bucket. */
 
 	hist_cnt_t total;	/**< Total number of counted values. */
 	hist_cnt_t higher;	/**< The number of values which are higher than #high. */ 
 	hist_cnt_t lower;	/**< The number of values which are lower than #low. */
 
 	hist_cnt_t *data;	/**< Pointer to dynamically allocated array of size length. */
-	
-	double _m[2], _s[2];	/**< Private variables for online variance calculation */
+	int length;		/**< The number of buckets in #data. */
 };
 
 /** Initialize struct hist with supplied values and allocate memory for buckets. */
@@ -67,6 +77,9 @@ void hist_print(struct hist *h);
 
 /** Print ASCII style plot of histogram */
 void hist_plot(struct hist *h);
+
+/** Readjust boundaries of histogram */
+int hist_readjust(struct hist *h);
 
 /** Dump histogram data in Matlab format.
  *

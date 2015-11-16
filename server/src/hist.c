@@ -33,6 +33,22 @@ void hist_create(struct hist *h, double low, double high, double resolution)
 void hist_destroy(struct hist *h)
 {
 	free(h->data);
+
+	h->data = NULL;
+}
+
+void hist_readjust(struct hist *h)
+{
+	double low = h->lowest;
+	double high = h->highest;
+	double dist = high - low;
+	double res = h->resolution;
+	
+	low  -= 0.2 * dist;
+	high += 0.2 * dist;
+	
+	hist_destroy(h);
+	hist_create(h, low, high, res);
 }
 
 void hist_put(struct hist *h, double value)
@@ -67,7 +83,7 @@ void hist_put(struct hist *h, double value)
 		h->_m[0] = h->_m[1] + (value - h->_m[1]) / h->total;
 		h->_s[0] = h->_s[1] + (value - h->_m[1]) * (value - h->_m[0]);
 
-		// set up for next iteration
+		/* set up for next iteration */
 		h->_m[1] = h->_m[0];
 		h->_s[1] = h->_s[0];
 	}
@@ -76,12 +92,12 @@ void hist_put(struct hist *h, double value)
 
 void hist_reset(struct hist *h)
 {
-	h->total = 0;
-	h->higher = 0;
-	h->lower = 0;
+	h->total  =
+	h->higher =
+	h->lower  = 0;
 
 	h->highest = DBL_MIN;
-	h->lowest = DBL_MAX;
+	h->lowest  = DBL_MAX;
 
 	memset(h->data, 0, h->length * sizeof(unsigned));
 }
