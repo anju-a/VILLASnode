@@ -46,9 +46,6 @@ struct list interfaces;
 
 int socket_init(int argc, char * argv[], config_setting_t *cfg)
 {
-	if (getuid() != 0)
-		error("The 'socket' node-type requires superuser privileges!");
-
 	nl_init(); /* Fill link cache */
 	list_init(&interfaces);
 

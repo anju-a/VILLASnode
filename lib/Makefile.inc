@@ -12,9 +12,15 @@ LIB_SRCS = $(addprefix lib/nodes/, file.c cbuilder.c) 		\
 
 LIB_CFLAGS  = $(CFLAGS) -fPIC
 LIB_LDFLAGS = -shared
-LIB_LDLIBS  = $(LDLIBS) -ldl -lrt
+LIB_LDLIBS  = $(LDLIBS) -ldl -lrt -lcap
 
 ######## Node types ########
+
+ifeq ($(shell pkg-config libcap; echo $$?),0)
+	LIB_PKGS    += libcap
+else
+	$(error Missing dependency: libcap)
+endif
 
 # Enable Socket node type when libnl3 is available
 ifndef WITHOUT_SOCKET

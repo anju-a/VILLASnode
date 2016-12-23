@@ -17,6 +17,7 @@
 #include <sys/utsname.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/capability.h>
 
 #include "utils.h"
 #include "config.h"
@@ -152,8 +153,7 @@ int kernel_get_cacheline_size()
 	return sysconf(_SC_LEVEL1_ICACHE_LINESIZE);
 }
 
-#if 0
-int kernel_check_cap(cap_value_t cap)
+int kernel_has_cap(cap_value_t cap)
 {
 	int ret;
 
@@ -164,10 +164,6 @@ int kernel_check_cap(cap_value_t cap)
 	if (caps == NULL)
 		return -1;
 
-	ret = cap_get_proc(caps);
-	if (ret == -1)
-		return -1;
-	
 	ret = cap_get_flag(caps, cap, CAP_EFFECTIVE, &value);
 	if (ret == -1)
 		return -1;
@@ -176,9 +172,8 @@ int kernel_check_cap(cap_value_t cap)
 	if (ret)
 		return -1;
 	
-	return value == CAP_SET ? 0 : -1;
+	return value == CAP_SET;
 }
-#endif
 
 int kernel_irq_setaffinity(unsigned irq, uintmax_t new, uintmax_t *old)
 {
