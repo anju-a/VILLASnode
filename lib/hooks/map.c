@@ -59,8 +59,8 @@ static int map_parse(struct hook *h, config_setting_t *cfg)
 	cfg_mapping = config_setting_lookup(cfg, "mapping");
 	if (!cfg_mapping || !config_setting_is_array(cfg_mapping))
 		return -1;
-
-	ret = mapping_parse(&p->mapping, cfg_mapping);
+	
+	ret = mapping_parse(&p->mapping, cfg_mapping, NULL);
 	if (ret)
 		return ret;
 

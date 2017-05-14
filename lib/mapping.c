@@ -28,13 +28,25 @@
 #include "list.h"
 #include "utils.h"
 
-int mapping_entry_parse_str(struct mapping_entry *e, const char *str)
+int mapping_entry_parse_str(struct mapping_entry *e, const char *str, struct list *nodes)
 {
-	char *cpy, *type, *field, *subfield, *end;
-
+	char *cpy, *node, *type, *field, *subfield, *end;
+	
 	cpy = strdup(str);
 	if (!cpy)
 		return -1;
+	
+	if (nodes) {
+		node = strtok(cpy, ".");
+		if (!node)
+			goto invalid_format;
+		
+		e->node = list_lookup(nodes, node);
+		if (!e->node)
+			goto invalid_format;
+	}
+	else
+		e->node = NULL;
 
 	type = strtok(cpy, ".[");
 	if (!type)
@@ -159,15 +171,15 @@ invalid_format:
 	return -1;
 }
 
-int mapping_entry_parse(struct mapping_entry *e, config_setting_t *cfg)
+int mapping_entry_parse(struct mapping_entry *e, config_setting_t *cfg, struct list *nodes)
 {
 	const char *str;
 
 	str = config_setting_get_string(cfg);
 	if (!str)
 		return -1;
-
-	return mapping_entry_parse_str(e, str);
+	
+	return mapping_entry_parse_str(e, str, nodes);
 }
 
 int mapping_init(struct mapping *m)
@@ -192,7 +204,7 @@ int mapping_destroy(struct mapping *m)
 	return 0;
 }
 
-int mapping_parse(struct mapping *m, config_setting_t *cfg)
+int mapping_parse(struct mapping *m, config_setting_t *cfg, struct list *nodes)
 {
 	int ret;
 
@@ -210,8 +222,8 @@ int mapping_parse(struct mapping *m, config_setting_t *cfg)
 		cfg_mapping = config_setting_get_elem(cfg, i);
 		if (!cfg_mapping)
 			return -1;
-
-		ret = mapping_entry_parse(&e, cfg_mapping);
+		
+		ret = mapping_entry_parse(&e, cfg_mapping, nodes);
 		if (ret)
 			return ret;
 

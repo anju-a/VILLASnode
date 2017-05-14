@@ -48,6 +48,9 @@ Test(advio, local)
 	ret = getline(&buf, &buflen, af->file);	
 	cr_assert_gt(ret, 1);
 	cr_assert_str_eq(buf, "/** Unit tests for advio\n");
+	
+	ret = afclose(af);
+	cr_assert_eq(ret, 0, "Failed to close file");
 }
 
 Test(advio, download)

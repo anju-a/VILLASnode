@@ -38,8 +38,8 @@ void usage()
 int main(int argc, char *argv[])
 {
 	int ret;
-
-	struct super_node sn;
+	
+	struct super_node sn = { .state = STATE_DESTROYED };
 	struct fpga_card *card;
 
 	/* Parse arguments */

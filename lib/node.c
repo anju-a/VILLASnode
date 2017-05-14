@@ -28,6 +28,7 @@
 #include "utils.h"
 #include "config.h"
 #include "plugin.h"
+#include "reader.h"
 
 int node_init(struct node *n, struct node_type *vt)
 {
@@ -195,6 +196,29 @@ int node_write(struct node *n, struct sample *smps[], unsigned cnt)
 	}
 
 	return nsent;
+}
+
+struct reader * node_get_reader(struct node *n)
+{
+	int ret;
+
+	/* Create a reader of none exists. */
+	if (!n->reader) {
+		struct reader r;
+		
+		ret = reader_init(&r, n);
+		if (ret)
+			return NULL;
+			
+		n->reader = memdup(&r, sizeof(r));
+	}
+	
+	return n->reader;
+}
+
+struct writer * node_get_writer(struct node *n)
+{
+	return NULL;
 }
 
 char * node_name(struct node *n)

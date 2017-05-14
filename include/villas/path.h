@@ -37,6 +37,7 @@
 #include "pool.h"
 #include "common.h"
 #include "hook.h"
+#include "writer.h"
 
 /* Forward declarations */
 struct stats;
@@ -46,37 +47,38 @@ struct super_node;
 struct path_source
 {
 	struct node *node;
-	struct pool pool;
-	int samplelen;
-	pthread_t tid;
+	struct path *path;
+	
+	struct queue queue;
+	
+	struct list mapping;
 };
 
 struct path_destination
 {
 	struct node *node;
+	struct path *path;
+
 	struct queue queue;
-	int queuelen;
-	pthread_t tid;
 };
 
 /** The datastructure for a path. */
 struct path
 {
 	enum state state;		/**< Path state. */
-
-	/* Each path has a single source and multiple destinations */
-	struct path_source *source;	/**< Pointer to the incoming node */
-	struct list destinations;	/**< List of all outgoing nodes (struct path_destination). */
-
-	struct list hooks;		/**< List of function pointers to hooks. */
+	
+	struct writer writer;
+	
+	struct list sources;		/**< List of incoming nodes (struct path_source). */
+	struct list destinations;	/**< List of outgoing nodes (struct path_destination). */
+	struct list hooks;		/**< List of hook functions. */
 
 	int enabled;			/**< Is this path enabled. */
-	int reverse;			/**< This path as a matching reverse path. */
-
-	int samplelen;
+	int reverse;			/**< This path has a matching reverse path. */
+	
 	int queuelen;
-
-	pthread_t tid;			/**< The thread id for this path. */
+	
+	struct sample *last;		/**< Last composite sample of this path */
 
 	char *_name;			/**< Singleton: A string which is used to print this path to screen. */
 
@@ -118,12 +120,6 @@ int path_stop(struct path *p);
  */
 int path_destroy(struct path *p);
 
-/** Show some basic statistics for a path.
- *
- * @param p A pointer to the path structure.
- */
-void path_print_stats(struct path *p);
-
 /** Fills the provided buffer with a string representation of the path.
  *
  * Format: source => [ dest1 dest2 dest3 ]
@@ -148,5 +144,7 @@ int path_uses_node(struct path *p, struct node *n);
  * @retval <0 Error. Something went wrong.
  */
 int path_parse(struct path *p, config_setting_t *cfg, struct list *nodes);
+
+int path_process(struct path *p, struct path_source *ps);
 
 /** @} */

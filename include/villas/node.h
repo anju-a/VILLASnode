@@ -36,6 +36,10 @@
 #include "queue.h"
 #include "common.h"
 
+/* Forward declarations */
+struct reader;
+struct writer;
+
 /** The data structure for a node.
  *
  * Every entity which exchanges messages is represented by a node.
@@ -48,12 +52,18 @@ struct node
 	char *_name;		/**< Singleton: A string used to print to screen. */
 	char *_name_long;	/**< Singleton: A string used to print to screen. */
 
-	int vectorize;		/**< Number of messages to send / recv at once (scatter / gather) */
+	int vectorize;		/**< The maximum number of messages to send / recv at once (scatter / gather) */
+	int samplelen;		/**< The maximum number of values per sample to send / recv. */
 	int affinity;		/**< CPU Affinity of this node */
 
 	int id;			/**< An id of this node which is only unique in the scope of it's super-node (VILLASnode instance). */
 
 	unsigned long sequence;	/**< This is a counter of received samples, in case the node-type does not generate sequence numbers itself. */
+	
+	struct sample *last;	/**< The last sample which has been _received_ by this node. */
+
+	struct reader *reader;	/**< The reader thread of this node. */
+	struct writer *writer;	/**< The writer thread of this node. */
 
 	enum state state;
 
@@ -122,6 +132,11 @@ int node_reverse(struct node *n);
 int node_read(struct node *n, struct sample *smps[], unsigned cnt);
 
 int node_write(struct node *n, struct sample *smps[], unsigned cnt);
+
+/** Find an already existing reader for a specific node. */
+struct reader * node_get_reader(struct node *n);
+
+struct writer * node_get_writer(struct node *n);
 
 /** Parse an array or single node and checks if they exist in the "nodes" section.
  *

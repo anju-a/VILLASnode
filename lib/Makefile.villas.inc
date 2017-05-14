@@ -25,13 +25,17 @@ LIB_ABI_VERSION = 1
 LIB = $(BUILDDIR)/$(LIB_NAME).so.$(LIB_ABI_VERSION)
 
 # Object files for libvillas
-LIB_SRCS += $(addprefix lib/nodes/, file.c cbuilder.c shmem.c) 		\
+LIB_SRCS += $(addprefix lib/nodes/, file.c cbuilder.c shmem.c)	\
             $(addprefix lib/kernel/, kernel.c rt.c)		\
-            $(addprefix lib/, sample.c path.c node.c hook.c	\
-               log.c log_config.c utils.c super_node.c hist.c timing.c pool.c	\
-               list.c queue.c queue_signalled.c memory.c advio.c web.c api.c	\
-               plugin.c node_type.c stats.c mapping.c sample_io.c shmem.c \
-               json.c crypt.c compat.c \
+            $(addprefix lib/, sample.c sample_io.c hook.c	\
+               node_type.c super_node.c node.c			\
+               path.c reader.c writer.c		\
+               pool.c list.c queue.c queue_signalled.c		\
+               log.c log_config.c				\
+               utils.c hist.c timing.c				\
+               memory.c shmem.c advio.c web.c api.c		\
+               plugin.c stats.c mapping.c 			\
+               json.c crypt.c compat.c			\
             )
 
 LIB_LDFLAGS = -shared
