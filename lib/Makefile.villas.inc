@@ -67,6 +67,14 @@ ifeq ($(shell $(PKGCONFIG) libzmq; echo $$?),0)
 endif
 endif
 
+# Enable IEC61850 node-types when libiec61850 is available
+ifndef WITHOUT_IEC61850
+ifneq ($(wildcard /usr/include/libiec61850/*),)
+	LIB_SRC		+= $(wildcard lib/nodes/iec61850_*.c)
+	LIB_LDLIBS  += -liec61850
+endif
+endif
+
 # Enable VILLASfpga support when libxil is available
 ifndef WITHOUT_FPGA
 ifeq ($(shell $(PKGCONFIG) libxil; echo $$?),0)
