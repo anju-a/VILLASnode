@@ -31,3 +31,6 @@
 [submodule "thirdparty/libzmq"]
 	path = thirdparty/libzmq
 	url = https://github.com/zeromq/libzmq.git
+[submodule "thirdparty/libiec61850"]
+	path = thirdparty/libiec61850
+	url = https://github.com/mz-automation/libiec61850
