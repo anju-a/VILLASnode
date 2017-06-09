@@ -53,6 +53,14 @@ rpm-libwebsockets: | $(RPMDIR)/RPMS/x86_64/ $(BUILDDIR)/thirdparty/libwebsockets
 	make  -C$(BUILDDIR)/thirdparty/libwebsockets libwebsockets_rpm
 	mv $(BUILDDIR)/thirdparty/libwebsockets/RPM/RPMS/x86_64/libwebsockets-*.rpm $(RPMDIR)/RPMS/x86_64/
 
+rpm-libiec61850: $(BUILDDIR)/thirdparty/libiec61850/ | $(RPMDIR)/SOURCES/
+	cmake -DCMAKE_INSTALL_PREFIX:PATH=$(PREFIX) \
+		      -H$(SRCDIR)/thirdparty/libiec61850 \
+		      -B$(BUILDDIR)/thirdparty/libiec61850 $(CMAKE_OPTS)
+	make -C$(BUILDDIR)/thirdparty/libiec61850 package_source
+	cp $(BUILDDIR)/thirdparty/libiec61850/libiec61850_*.tar.gz $(RPMDIR)/SOURCES/
+	rpmbuild -ba --define="_topdir $$(pwd)/$(RPMDIR)" $(SRCDIR)/packaging/rpm/libiec61850.spec
+
 # We patch version number and release fields of the spec file based on the current Git commit
 $(SPEC_VILLAS): $(SRCDIR)/packaging/rpm/villas-node.spec | $$(dir $$@)
 	sed -e "s/§VERSION§/$(VERSION_NUM)/g" \
