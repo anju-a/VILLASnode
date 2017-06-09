@@ -3,5 +3,6 @@
 !thirdparty/libxil/
 !thirdparty/criterion/
 !thirdparty/libwebsockets/
+!thirdparty/libiec61850/
 !thirdparty/nanomsg/
 !thirdparty/libzmq/
