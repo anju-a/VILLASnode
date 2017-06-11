@@ -1,0 +1,36 @@
+CASE: Test Circuit 
+Delt: 50.000000 us 
+CALC_TIME_STEP: OFF
+Rack: 4 NoRealTime: 0 
+Distribution_mode: 0
+vsc_mode: 0
+CVer: 4.0 
+RTDSPC_VERSION:  4.0.0h
+
+
+String Desc="CircuitTitle Annotation" Group="Annotation" InitValue="Voltage Divider Tutorial Case #1"
+Output Desc="S1) N1" Group="Subsystem #1|Node Voltages" Units="kV" Type=IEEE Min=0.0000 Max=1.0000 Rack=4 Adr=20000C
+Output Desc="S1) N2" Group="Subsystem #1|Node Voltages" Units="kV" Type=IEEE Min=0.0000 Max=1.0000 Rack=4 Adr=200010
+Output Desc="S1) N3" Group="Subsystem #1|Node Voltages" Units="kV" Type=IEEE Min=0.0000 Max=1.0000 Rack=4 Adr=200014
+Pushbutton Desc="Ftrg" Group="Subsystem #1|Sources|src" Type=INT P0=0 P1=1 Rack=4 Adr=783010
+Slider Desc="ABCmag" Group="Subsystem #1|Sources|src" Type=IEEE Units="KV" InitValue=230.000000 Min=0.000000 Max=460.000000 Rack=4 Adr=783014
+Slider Desc="Phase" Group="Subsystem #1|Sources|src" Type=IEEE Units="Deg" InitValue=0.000000 Min=-360.000000 Max=360.000000 Rack=4 Adr=783018
+Slider Desc="Freq" Group="Subsystem #1|Sources|src" Type=IEEE Units="Hz" InitValue=60.000000 Min=0.000000 Max=70.000000 Rack=4 Adr=78301C
+String Desc="Draft file" Group="Annotation" InitValue="Draft file: C:\RSCAD_5\TUTORIAL\GPC-PB5\CH1-VoltageDivider\vdiv.dft"
+String Desc="Draft file modification date" Group="Time tags" InitValue="2013/12/12 22:10:06"
+String Desc="Compile date" Group="Time tags" InitValue="2017/05/30 01:47:36"
+
+
+COMPONENT_TIMING_INFORMATION:
+timing_record: subsystem=1 hidden_xfer_ns=0
+timing_record: subsystem=1 processor=0 processor_type=GPC T0_active=1
+timing_record: subsystem=1 processor=1 processor_type=GPC T0_active=1
+timing_record: subsystem=1 processor=2 processor_type=GPC T0_active=0
+timing_record: subsystem=1 processor=3 processor_type=GPC T0_active=0
+timing_record: subsystem=1 processor=4 processor_type=GPC T0_active=0
+timing_record: subsystem=1 processor=5 processor_type=GPC T0_active=0
+timing_record: subsystem=1 processor=6 processor_type=GPC T0_active=0
+timing_record: subsystem=1 processor=7 processor_type=GPC T0_active=0
+timing_record: subsystem=1 processor_type=3PC processor_count=0
+timing_record: timing_name=netsolCB component_type=risc_net subsystem=1 processor=0 processor_type=GPC clock_index=1 enabled=true use=PSYS lf=100.000000 description=NetworkSolution
+timing_record: timing_name=src3P component_type=RISC_CMODEL subsystem=1 processor=1 processor_type=GPC clock_index=1 enabled=true use=PSYS lf=10.000000 description=Source
