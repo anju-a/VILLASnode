@@ -51,6 +51,11 @@ ifeq ($(shell $(PKGCONFIG) libnl-route-3.0; echo $$?),0)
 endif
 endif
 
+# Enable GTWIF node type
+ifndef WITHOUT_GTWIF
+	LIB_SRCS    += lib/nodes/gtwif.c
+endif
+
 # Enable nanomsg node type when libnanomsg is available
 ifndef WITHOUT_NANOMSG
 ifeq ($(shell $(PKGCONFIG) nanomsg; echo $$?),0)
