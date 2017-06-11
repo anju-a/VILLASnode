@@ -29,13 +29,28 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <netinet/in.h>
 
 #include "node.h"
 #include "list.h"
+#include "rscad.h"
 
 struct gtwif {
+	struct sockaddr_in remote;	/**< The IP / port address of the RTDS racks. */
+
+	struct gtwif_direction {
+		uint32_t *addresses;
+		int count;
+	} in, out;
 	
+	struct rscad_inf inffile;	/**< The RSCAD case information file. */
+	
+	int sd;				/**< The socket descriptor. */
+	
+	double rate;			/**< The polling rate. */
+	double timeout;			/**< The recv() timeout. */
+	
+	struct sample *last;		/**< The last sample which has been sent by this node. */
 };
 
 /** @} */
