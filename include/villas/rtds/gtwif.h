@@ -1,5 +1,6 @@
-/** Unit tests for RSCAD parses
+/** Parsers for RSCAD file formats
  *
+ * @file
  * @author Steffen Vogel <stvogel@eonerc.rwth-aachen.de>
  * @copyright 2017, Institute for Automation of Complex Power Systems, EONERC
  * @license GNU General Public License (version 3)
@@ -20,39 +21,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *********************************************************************************/
 
-#include <criterion/criterion.h>
+#pragma once
 
-#include "rscad.h"
+#include <stdlib.h>
+#include <stdint.h>
 
-#define PATH_INF "tests/data/rscad/vdiv.inf"
+#define GTWIF_CMD_MODIFY	0x004D
+#define GTWIF_CMD_EXAMINE	0x0058	
+#define GTWIF_CMD_READLIST2	0x0143
+#define GTWIF_CMD_PING		0x0136
 
-Test(rscad, inf)
-{
-	int ret;
-	struct rscad_inf i;
-	struct rscad_inf_element *e;
+/** Send command CMD_READLIST2 to a GTWIF card.
+ *
+ * This command reads a list of signals from the GTWIF card.
+ */
+int gtwif_cmd_readlist2(int sd, uint32_t cnt, uint32_t addrs[], uint32_t vals[]);
 
-	FILE *f = fopen(PATH_INF, "r");
-	cr_assert_not_null(f);
-	
-	ret = rscad_inf_init(&i);
-	cr_assert_eq(ret, 0);
-	
-	ret = rscad_inf_parse(&i, f);
-	cr_assert_eq(ret, 0);
-	
-	e = rscad_inf_lookup_element(&i, "Subsystem #1|Sources|src|ABCmag");
-	cr_assert_not_null(e);
-	
-	cr_assert_eq(e->address, 0x783014);
-	cr_assert_eq(e->rack, 4);
-	cr_assert_eq(e->datatype, RSCAD_INF_DATATYPE_IEEE);
-	cr_assert_eq(e->init_value.f, 230.0);
-	cr_assert_eq(e->min.f, 0.0);
-	cr_assert_eq(e->max.f, 460.0);
-	
-	ret = rscad_inf_destroy(&i);
-	cr_assert_eq(ret, 0);
-	
-	fclose(f);
-}
+/** Send command CMD_EXAMINE to a GTWIF card.
+ *
+ * This command modifies a memory location in the GTWIF memory.
+ */
+int gtwif_cmd_examine(int sd, uint32_t addr, uint32_t *val);
+
+int gtwif_cmd_modify(int sd, uint32_t addr, uint32_t val);
+
+int gtwif_cmd_modify_many(int sd, uint32_t cnt, uint32_t addrs[], uint32_t vals[], uint32_t old_vals[]);
+
+int gtwif_cmd_ping(int sd, char *name, size_t namelen, char *casename, size_t casenamelen);

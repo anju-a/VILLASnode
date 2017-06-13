@@ -24,7 +24,7 @@
 #include <stdlib.h>
 
 #include "log.h"
-#include "rscad.h"
+#include "rtds/rscad.h"
 
 static int rscad_inf_destroy_attribute(struct rscad_inf_attribute *a)
 {

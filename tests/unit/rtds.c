@@ -1,6 +1,5 @@
-/** Node type: GTWIF - RSCAD protocol for RTDS
+/** Unit tests for RSCAD parses
  *
- * @file
  * @author Steffen Vogel <stvogel@eonerc.rwth-aachen.de>
  * @copyright 2017, Institute for Automation of Complex Power Systems, EONERC
  * @license GNU General Public License (version 3)
@@ -21,36 +20,45 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *********************************************************************************/
 
-/**
- * @addtogroup gtwif GTWIF protocol for RTDS node type
- * @ingroup node
- * @{
- */
+#include <criterion/criterion.h>
 
-#pragma once
-
-#include <netinet/in.h>
-
-#include "node.h"
-#include "list.h"
 #include "rtds/rscad.h"
+#include "rtds/gtwif.h"
 
-struct gtwif {
-	struct sockaddr_in remote;	/**< The IP / port address of the RTDS racks. */
+#define PATH_INF "tests/data/rscad/vdiv.inf"
 
-	struct gtwif_direction {
-		uint32_t *addresses;
-		int count;
-	} in, out;
+Test(rtds, gtwif)
+{
 	
-	struct rscad_inf inffile;	/**< The RSCAD case information file. */
-	
-	int sd;				/**< The socket descriptor. */
-	
-	double rate;			/**< The polling rate. */
-	double timeout;			/**< The recv() timeout. */
-	
-	struct sample *last;		/**< The last sample which has been sent by this node. */
-};
+}
 
-/** @} */
+Test(rtds, rscad_inf)
+{
+	int ret;
+	struct rscad_inf i;
+	struct rscad_inf_element *e;
+
+	FILE *f = fopen(PATH_INF, "r");
+	cr_assert_not_null(f);
+	
+	ret = rscad_inf_init(&i);
+	cr_assert_eq(ret, 0);
+	
+	ret = rscad_inf_parse(&i, f);
+	cr_assert_eq(ret, 0);
+	
+	e = rscad_inf_lookup_element(&i, "Subsystem #1|Sources|src|ABCmag");
+	cr_assert_not_null(e);
+	
+	cr_assert_eq(e->address, 0x783014);
+	cr_assert_eq(e->rack, 4);
+	cr_assert_eq(e->datatype, RSCAD_INF_DATATYPE_IEEE);
+	cr_assert_eq(e->init_value.f, 230.0);
+	cr_assert_eq(e->min.f, 0.0);
+	cr_assert_eq(e->max.f, 460.0);
+	
+	ret = rscad_inf_destroy(&i);
+	cr_assert_eq(ret, 0);
+	
+	fclose(f);
+}
