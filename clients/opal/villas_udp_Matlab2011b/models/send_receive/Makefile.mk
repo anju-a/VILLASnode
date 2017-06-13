@@ -76,4 +76,4 @@ clean:
 $(TARGET): $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
--include $(wildcard *.d)
+include $(wildcard *.d)

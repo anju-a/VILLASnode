@@ -20,31 +20,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###################################################################################
 
-# Plugins
-PLUGINS = $(BUILDDIR)/simple_circuit.so \
-	  $(BUILDDIR)/example_hook.so
+TAROPTS = --exclude-ignore-recursive=.distignore --transform='s|^\.|villas-node-$(VERSION_NUM)|' --show-transformed-names
 
-PLUGIN_CFLAGS = -fPIC -DVILLAS -I../include/villas
+TAR_VILLAS = $(BUILDDIR)/packaging/villas-node-$(VERSION_NUM)-1.$(GIT_BRANCH)_$(subst -,_,$(VARIANT)).$(shell date +%Y%m%d)git$(GIT_REV).tar.gz
 
-# Dependencies for plugins
-$(BUILDDIR)/example_hook.so:   $(BUILDDIR)/plugins/hooks/example_hook.o
-$(BUILDDIR)/simple_circuit.so: $(BUILDDIR)/plugins/models/simple_circuit.o
+# Source tarballs
+dist: $(TAR_VILLAS)
 
-plugins: $(PLUGINS) lib
+$(TAR_VILLAS): | $$(dir $$@)
+	tar $(TAROPTS) -C $(SRCDIR) -czf $@ .
 
-# Compile
-$(BUILDDIR)/plugins/%.o: plugins/%.c | $$(dir $$@)
-	$(CC) $(CFLAGS) $(PLUGIN_CFLAGS) -c $< -o $@
+deploy-dist: $(TAR_VILLAS)
+	rsync $(TAR_VILLAS) $(DEPLOY_USER)@$(DEPLOY_HOST):$(DEPLOY_PATH)/src
 
-# Link
-$(PLUGINS):
-	$(CC) $(LIB_LDFLAGS) -o $@ $^ $(LIB_LDLIBS)
+clean-dist:
+	rm -f $(TAR_VILLAS)
 
-# Plugins are not installed to the system for now...
-install-plugins: plugins
-	install -D -t $(DESTDIR)$(PREFIX)/share/villas/node/plugins $(PLUGINS)
-	
-clean-plugins:
-	rm -rf $(BUILDDIR)/plugins $(PLUGINS)
-
-.PHONY: plugins install-plugins clean-plugins
+.PHONY: dist clean-dist deploy-dist

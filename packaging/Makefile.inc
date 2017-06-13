@@ -20,56 +20,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###################################################################################
 
-TAROPTS = --exclude-ignore-recursive=.distignore --transform='s|^\.|villas-node-$(VERSION_NUM)|' --show-transformed-names
-
-TAR_VILLAS = $(BUILDDIR)/packaging/villas-node-$(VERSION_NUM)-1.$(GIT_BRANCH)_$(subst -,_,$(VARIANT)).$(shell date +%Y%m%d)git$(GIT_REV).tar.gz
-
 DEPLOY_USER ?= root
 DEPLOY_HOST ?= villas.fein-aachen.org
 DEPLOY_PATH ?= /var/www/villas/node
 
-DOCKER_IMAGE ?= villas/node
-
-deploy-docker-dev: DOCKER_IMAGE := $(DOCKER_IMAGE)-dev
-docker-dev: DOCKER_IMAGE := $(DOCKER_IMAGE)-dev
+include packaging/rpm/Makefile.inc
+include packaging/Makefile.docker.inc
+include packaging/Makefile.dist.inc
 
 packaging: rpm dist
 	
 deploy: deploy-dist deploy-rpm deploy-docker
 	
-# Source tarballs
-dist: $(TAR_VILLAS)
-
-$(TAR_VILLAS): | $$(dir $$@)
-	tar $(TAROPTS) -C $(SRCDIR) -czf $@ .
-
-deploy-dist: $(TAR_VILLAS)
-	rsync $(TAR_VILLAS) $(DEPLOY_USER)@$(DEPLOY_HOST):$(DEPLOY_PATH)/src
-	
-deploy-rpm:
-	rsync -a --progress $(RPMDIR)/RPMS/ $(DEPLOY_USER)@$(DEPLOY_HOST):$(DEPLOY_PATH)/../packages/
-	ssh $(DEPLOY_USER)@$(DEPLOY_HOST) createrepo $(DEPLOY_PATH)/../packages
-
-deploy-docker deploy-docker-dev:
-	docker push $(DOCKER_IMAGE):$(GIT_BRANCH)
-
-# Docker targets
-run-docker-dev: docker-dev
-	docker run -it -p 80:80 -p 443:443 -p 1234:1234 -p 12000:12000/udp -p 12001:12001/udp --privileged --security-opt seccomp:unconfined -v "$(SRCDIR):/villas" $(DOCKER_IMAGE)-dev:$(GIT_BRANCH)
-
-docker-dev:
-	docker pull fedora:25
-	docker build -f Dockerfile.dev -t $(DOCKER_IMAGE):$(GIT_BRANCH) $(SRCDIR)
-	
-docker:
-	docker pull fedora:25
-	docker build -f Dockerfile -t $(DOCKER_IMAGE):$(GIT_BRANCH) $(SRCDIR)
-	
-clean-packaging:
-	rm -f $(BUILDDIR)/packaging/villas-node-$(VERSION_NUM).tar.gz
+clean-packaging: clean-rpm clean-dist
 
 install-packaging:
 
-.PHONY: packaging install-packaging clean-packaging deploy deploy-dist deploy-rpm dist docker docker-dev run-docker-dev $(TAR_VILLAS)
-
--include packaging/rpm/Makefile.inc
+.PHONY: packaging install-packaging clean-packaging deploy

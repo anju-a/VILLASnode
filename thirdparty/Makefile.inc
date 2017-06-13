@@ -20,10 +20,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###################################################################################
 
-DEPS_CMAKE = libxil libwebsockets criterion jansson nanomsg
-DEPS_AUTOCONF = libnl libconfig libcurl libzmq
+REQS_CMAKE = libxil libwebsockets criterion jansson nanomsg
+REQS_AUTOCONF = libnl libconfig libcurl libzmq
 
-DEPS = $(DEPS_CMAKE) $(DEPS_AUTOCONF)
+REQS = $(REQS_CMAKE) $(REQS_AUTOCONF)
 
 ifdef DEBUG
 	CMAKE_OPTS += -DCMAKE_BUILD_TYPE=DEBUG
@@ -38,30 +38,29 @@ CONFIGURE_OPTS = --prefix=$(PREFIX)
 thirdparty:
 
 # Install & compile autotools based projects
-$(DEPS_AUTOCONF): CPPFLAGS=$(AC_CPPFLAGS) CFLAGS=$(AC_CFLAGS) CXXFLAGS=$(AC_CXXFLAGS)
-$(DEPS_AUTOCONF): | $(BUILDDIR)/thirdparty/$$@/
+$(REQS_AUTOCONF): CPPFLAGS=$(AC_CPPFLAGS) CFLAGS=$(AC_CFLAGS) CXXFLAGS=$(AC_CXXFLAGS)
+$(REQS_AUTOCONF): | $(BUILDDIR)/thirdparty/$$@/
 	autoreconf -fi $(SRCDIR)/thirdparty/$@
 	cd $(BUILDDIR)/thirdparty/$@ && $(SRCDIR)/thirdparty/$@/configure $(CONFIGURE_OPTS) && make
 
 # Install & compile CMake based projects
-$(DEPS_CMAKE): | $(BUILDDIR)/thirdparty/$$@/
+$(REQS_CMAKE): | $(BUILDDIR)/thirdparty/$$@/
 	cmake -DCMAKE_INSTALL_PREFIX:PATH=$(PREFIX) \
 	      -DCMAKE_INSTALL_LIBDIR=$(PREFIX)/lib64 -DLIB_SUFFIX=64 \
 	      -H$(SRCDIR)/thirdparty/$@ \
 	      -B$(BUILDDIR)/thirdparty/$@ $(CMAKE_OPTS)
 	make  -C$(BUILDDIR)/thirdparty/$@
 
-$(addprefix install-,$(DEPS)): install-%: %
+$(addprefix install-,$(REQS)): install-%: %
 	make -C$(BUILDDIR)/thirdparty/$(@:install-%=%) install
 	ldconfig
 
-$(addprefix clean-,$(DEPS)):
-	rm -rf $(BUILDDIR)/thirdparty/$(@:clean-%=%)
+$(addprefix clean-,$(REQS)):
+	if [ -d $(BUILDDIR)/thirdparty/$(@:clean-%=%) ]; then make -C$(BUILDDIR)/thirdparty/$(@:clean-%=%) clean; fi
 
-install-thirdparty: $(addprefix install-,$(DEPS))
+install-thirdparty: $(addprefix install-,$(REQS))
 
-clean-thirdparty: $(addprefix clean-,$(DEPS))
-	rm -rf $(BUILDDIR)/thirdparty
+clean-thirdparty: $(addprefix clean-,$(REQS))
 
 # libconfig's build system is currently broken.
 # This is a workaround for: https://github.com/hyperrealm/libconfig/issues/53
@@ -70,6 +69,6 @@ libconfig-fix:
 	rm -f $(SRCDIR)/thirdparty/libconfig/lib/scanner.[hc]
 
 libwebsockets: CMAKE_OPTS += -DLWS_IPV6=1 -DLWS_WITH_STATIC=0 -DLWS_WITHOUT_TESTAPPS=1 -DLWS_WITH_HTTP2=1
-libzmq: CONFIGURE_OPTS += --with-libsodium --with-pgm --enable-drafts
+libzmq:    CONFIGURE_OPTS += --with-libsodium --with-pgm --enable-drafts
 
-.PHONY: $(DEPS) thirdparty clean-thirdparty install-thirdparty
+.PHONY: $(REQS) thirdparty clean-thirdparty install-thirdparty

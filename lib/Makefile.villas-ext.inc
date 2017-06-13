@@ -24,6 +24,8 @@ LIBEXT_NAME = libvillas-ext
 LIBEXT_ABI_VERSION = 1
 LIBEXT = $(BUILDDIR)/$(LIBEXT_NAME).so.$(LIBEXT_ABI_VERSION)
 
+LIBS += $(LIBEXT)
+
 LIBEXT_SRCS += $(addprefix lib/, sample.c queue.c queue_signalled.c \
                  memory.c log.c shmem.c utils.c kernel/kernel.c list.c \
                  timing.c pool.c \
@@ -40,11 +42,11 @@ $(LIBEXT): $(LIBEXT_OBJS)
 	$(CC) $(LIBEXT_LDFLAGS) -o $@ $^ $(LIBEXT_LDLIBS)
 	ln -srf $@ $(BUILDDIR)/$(LIBEXT_NAME).so
 
-install-libvillas-ext: libvillas-ext
+install-$(LIBEXT_NAME): $(LIBEXT)
 	install -m 0755 -D -T $(LIBEXT) $(DESTDIR)$(PREFIX)/lib/$(LIBEXT_NAME).so.$(LIBEXT_ABI_VERSION)
-	ln -srf $(DESTDIR)$(PREFIX)/lib/$(LIBEXT_NAME).so.$(LIBEXT_ABI_VERSION) $(DESTDIR)$(PREFIX)/lib/$(LIBEXT_NAME).so
+	ln -srf $(DESTDIR)$(PREFIX)/lib/$(LIBEXT_NAME).so $(DESTDIR)$(PREFIX)/lib/$(LIBEXT_NAME).so.$(LIBEXT_ABI_VERSION)
 
-clean-libvillas-ext:
-	rm -rf $(BUILDDIR)/lib $(LIBEXT)
+clean-$(LIBEXT_NAME):
+	rm -f $(LIBEXT_OBJS) $(LIBEXT)
 
-.PHONY: install-libvillas-ext clean-libvillas-ext $(LIBEXT_NAME)
+.PHONY: install-$(LIBEXT_NAME) clean-$(LIBEXT_NAME) $(LIBEXT_NAME)

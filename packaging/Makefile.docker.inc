@@ -20,31 +20,25 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###################################################################################
 
-# Plugins
-PLUGINS = $(BUILDDIR)/simple_circuit.so \
-	  $(BUILDDIR)/example_hook.so
+DOCKER_IMAGE ?= villas/node
+DOCKER_OPTS ?= -it -p 80:80 -p 443:443 -p 1234:1234 -p 12000:12000/udp -p 12001:12001/udp --privileged --security-opt seccomp:unconfined -v "$(PWD):/villas"
 
-PLUGIN_CFLAGS = -fPIC -DVILLAS -I../include/villas
+deploy-docker-dev: DOCKER_IMAGE := $(DOCKER_IMAGE)-dev
+docker-dev: DOCKER_IMAGE := $(DOCKER_IMAGE)-dev
 
-# Dependencies for plugins
-$(BUILDDIR)/example_hook.so:   $(BUILDDIR)/plugins/hooks/example_hook.o
-$(BUILDDIR)/simple_circuit.so: $(BUILDDIR)/plugins/models/simple_circuit.o
+deploy-docker deploy-docker-dev:
+	docker push $(DOCKER_IMAGE):$(GIT_BRANCH)
 
-plugins: $(PLUGINS) lib
+# Docker targets
+run-docker-dev: docker-dev
+	docker run $(DOCKER_OPTS) $(DOCKER_IMAGE)-dev:$(GIT_BRANCH)
 
-# Compile
-$(BUILDDIR)/plugins/%.o: plugins/%.c | $$(dir $$@)
-	$(CC) $(CFLAGS) $(PLUGIN_CFLAGS) -c $< -o $@
-
-# Link
-$(PLUGINS):
-	$(CC) $(LIB_LDFLAGS) -o $@ $^ $(LIB_LDLIBS)
-
-# Plugins are not installed to the system for now...
-install-plugins: plugins
-	install -D -t $(DESTDIR)$(PREFIX)/share/villas/node/plugins $(PLUGINS)
+docker-dev:
+	docker pull fedora:25
+	docker build -f Dockerfile.dev -t $(DOCKER_IMAGE):$(GIT_BRANCH) $(SRCDIR)
 	
-clean-plugins:
-	rm -rf $(BUILDDIR)/plugins $(PLUGINS)
+docker:
+	docker pull fedora:25
+	docker build -f Dockerfile -t $(DOCKER_IMAGE):$(GIT_BRANCH) $(SRCDIR)
 
-.PHONY: plugins install-plugins clean-plugins
+.PHONY: docker deploy-docker docker-dev run-docker-dev

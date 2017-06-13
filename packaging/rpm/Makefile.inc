@@ -61,7 +61,11 @@ $(SPEC_VILLAS): $(SRCDIR)/packaging/rpm/villas-node.spec | $$(dir $$@)
 sign-rpm:
 	rpmsign $(RPMDIR)/RPMS/*/.rpm
 
+deploy-rpm:
+	rsync -a --progress $(RPMDIR)/RPMS/ $(DEPLOY_USER)@$(DEPLOY_HOST):$(DEPLOY_PATH)/../packages/
+	ssh $(DEPLOY_USER)@$(DEPLOY_HOST) createrepo $(DEPLOY_PATH)/../packages
+
 clean-rpm:
 	rm -rf $(RPMDIR)
 
-.PHONY: rpm clean-rpm rpm-libwebsockets rpm-libxil
+.PHONY: rpm clean-rpm deploy-rpm sign-rpm rpm-libwebsockets rpm-libxil

@@ -24,3 +24,7 @@ integration-tests: src tools
 
 run-integration-tests: integration-tests
 	@$(SRCDIR)/tests/integration-tests.sh
+
+clean-integration-tests:
+
+.PHONY: integration-tests run-integration-tests clean-integration-tests

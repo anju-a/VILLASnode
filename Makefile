@@ -112,14 +112,19 @@ CFLAGS += $(shell $(PKGCONFIG) --cflags ${PKGS})
 LDLIBS += $(shell $(PKGCONFIG) --libs ${PKGS})
 
 all: src plugins tools
-src plugins tools tests: lib
 
 # Build all variants: debug, coverage, ...
 everything:
-	$(MAKE) RELEASE=1
-	$(MAKE) DEBUG=1
-	$(MAKE) COVERAGE=1
-	$(MAKE) PROFILE=1
+	$(MAKE) RELEASE=1  tools run-tests
+	$(MAKE) DEBUG=1    tools run-tests
+	$(MAKE) COVERAGE=1 tools run-tests
+	$(MAKE) PROFILE=1  tools run-tests
+
+clean-everything:
+	$(MAKE) RELEASE=1  clean
+	$(MAKE) DEBUG=1    clean
+	$(MAKE) COVERAGE=1 clean
+	$(MAKE) PROFILE=1  clean
 
 # Create non-existent directories
 .SECONDEXPANSION:
@@ -141,15 +146,16 @@ define DEFINES
 endef
 export DEFINES
 
+include $(wildcard $(BUILDDIR)/**/*.d)
+include $(addsuffix /Makefile.inc,$(MODULES))
+
 $(BUILDDIR)/defines: | $$(dir $$@)
 	echo "$${DEFINES}" > $@
 	echo -e "$(addprefix \n-DWITH_, $(shell echo ${PKGS} | tr a-z- A-Z_ | tr -dc ' A-Z0-9_' ))" >> $@
 	echo -e "$(addprefix \n-DWITH_, $(shell echo ${LIB_PKGS} | tr a-z- A-Z_ | tr -dc ' A-Z0-9_' ))" >> $@
 
-install: $(addprefix install-,$(filter-out thirdparty doc clients,$(MODULES)))
-clean: $(addprefix clean-,$(filter-out thirdparty doc clients,$(MODULES)))
+install: $(addprefix install-,$(filter-out thirdparty,$(MODULES)))
+clean: $(addprefix clean-,$(MODULES))
+	rm -f $(BUILDDIR)/defines
 
-.PHONY: all everything clean install
-
--include $(wildcard $(BUILDDIR)/**/*.d)
--include $(addsuffix /Makefile.inc,$(MODULES))
+.PHONY: all clean install everything clean-everything

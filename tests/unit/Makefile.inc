@@ -22,6 +22,7 @@
 
 TEST_SRCS = $(wildcard tests/unit/*.c)
 TEST_OBJS = $(patsubst %.c,$(BUILDDIR)/%.o,$(TEST_SRCS))
+TEST_DEPS = $(patsubst %.c,$(BUILDDIR)/%.d,$(TEST_SRCS))
 
 TEST_CFLAGS = $(CFLAGS)
 TEST_LDFLAGS = $(LDFLAGS) -Wl,-rpath,'$$ORIGIN'
@@ -41,13 +42,13 @@ $(BUILDDIR)/unit-tests: $(TEST_OBJS) $(LIB)
 	$(CC) $(TEST_LDFLAGS) $^ $(TEST_LDLIBS) -o $@
 
 ifdef COVERAGE
--include tests/unit/Makefile.gcov.inc
+include tests/unit/Makefile.gcov.inc
 endif
 
 # Tests are not installed
 install-tests:
 	
-clean-tests:
-	rm -rf $(BUILDDIR)/tests $(BUILDDIR)/testsuite
+clean-unit-tests:
+	rm -f $(TEST_OBJS) $(TEST_DEPS) $(BUILDDIR)/unit-tests
 
 .PHONY: unit-tests install-unit-tests clean-unit-tests run-unit-tests

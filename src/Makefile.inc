@@ -21,13 +21,13 @@
 ###################################################################################
 
 # Executables
-TARGETS = $(BUILDDIR)/villas-node \
-	  $(BUILDDIR)/villas-pipe  \
-	  $(BUILDDIR)/villas-signal \
-	  $(BUILDDIR)/villas-test-rtt \
-	  $(BUILDDIR)/villas-test-cmp \
-	  $(BUILDDIR)/villas-test-shmem \
-	  $(BUILDDIR)/villas-hook
+SRCS = src/node.c \
+	   src/pipe.c  \
+	   src/signal.c \
+	   src/test-rtt.c \
+	   src/test-cmp.c \
+	   src/test-shmem.c \
+	   src/hook.c
 
 SRC_LDLIBS = $(LDLIBS) -pthread -lm -lvillas
 SRC_CFLAGS = $(CFLAGS)
@@ -38,7 +38,7 @@ ifeq ($(shell $(PKGCONFIG) libxil; echo $$?),0)
 	LIB_SRCS    += $(addprefix lib/nodes/, fpga.c)
 	LIB_SRCS    += $(addprefix lib/kernel/, pci.c vfio.c)
 	LIB_SRCS    += $(wildcard  lib/fpga/*.c)
-	TARGETS     += $(BUILDDIR)/villas-fpga
+	SRCS        += src/fpga.c
 	PKGS        += libxil
 
 	# Add support for LAPACK / BLAS benchmarks / solvers
@@ -48,9 +48,13 @@ ifeq ($(shell $(PKGCONFIG) libxil; echo $$?),0)
 	endif
 endif
 
-src: $(TARGETS)
+BINS = $(patsubst src/%.c, $(BUILDDIR)/villas-%, $(SRCS))
+OBJS = $(patsubst src/%.c, $(BUILDDIR)/src/%.o, $(SRCS))
+DEPS = $(patsubst src/%.c, $(BUILDDIR)/src/%.d, $(SRCS))
 
-$(TARGETS): $(BUILDDIR)/villas-%: $(BUILDDIR)/src/%.o
+src: $(BINS) lib
+
+$(BINS): $(BUILDDIR)/villas-%: $(BUILDDIR)/src/%.o
 
 # Some additional prereqs for individual binaries
 $(BUILDDIR)/villas-fpga: $(addprefix $(BUILDDIR)/src/,fpga-bench.o $(BENCH_OBJS))
@@ -64,14 +68,14 @@ $(BUILDDIR)/villas-shmem: $(BUILDDIR)/src/shmem.o libvillas-ext
 	$(CC) $(SRC_LDFLAGS) $(BUILDDIR)/src/shmem.o $(filter-out -lvillas,$(SRC_LDLIBS)) -lvillas-ext -o $@
 
 # Link target executables
-$(TARGETS): | $(LIBS)
+$(BINS): | $(LIBS)
 	$(CC) $(SRC_LDFLAGS) $^ $(SRC_LDLIBS) -o $@
 
 # Install
-install-src: src
-	install -m 0755 -D -t $(DESTDIR)$(PREFIX)/bin $(TARGETS)
+install-src: src install-lib
+	install -m 0755 -D -t $(DESTDIR)$(PREFIX)/bin $(BINS)
 
 clean-src:
-	rm -rf $(BUILDDIR)/src $(TARGETS)
+	rm -f $(DEPS) $(OBJS) $(BINS)
 
-.PHONY: src src-tests src-tests
+.PHONY: src install-src clean-src

@@ -20,30 +20,34 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###################################################################################
 
-TOOLS = $(BUILDDIR)/conf2json
+TOOLS_SRCS = tools/conf2json.c
 
 TOOLS_CFLAGS = $(CFLAGS)
 TOOLS_LDLIBS = -lconfig -ljansson -lvillas
 TOOLS_LDFLAGS = $(LDFLAGS) -Wl,-rpath,'$$ORIGIN'
 
 ifeq ($(shell $(PKGCONFIG) libzmq; echo $$?),0)
-	TOOLS += $(BUILDDIR)/zmq-keygen
+	TOOLS_SRCS   += tools/zmq-keygen.c
 	TOOLS_CFLAGS += $(shell $(PKGCONFIG) --cflags libzmq)
 	TOOLS_LDLIBS += $(shell $(PKGCONFIG) --libs libzmq)
 endif
+
+TOOLS_BINS = $(patsubst tools/%.c, $(BUILDDIR)/villas-%, $(TOOLS_SRCS))
+TOOLS_DEPS = $(patsubst tools/%.c, $(BUILDDIR)/tools/%.d, $(TOOLS_SRCS))
+TOOLS_OBJS = $(patsubst tools/%.c, $(BUILDDIR)/tools/%.o, $(TOOLS_SRCS))
 
 # Compile executable objects
 $(BUILDDIR)/tools/%.o: tools/%.c $(BUILDDIR)/defines | $$(dir $$@)
 	$(CC) $(TOOLS_CFLAGS) -c $< -o $@
 
 # Link target executables
-$(TOOLS): $(BUILDDIR)/%: $(BUILDDIR)/tools/%.o | $(LIBS)
+$(TOOLS): $(BUILDDIR)/villas-%: $(BUILDDIR)/tools/%.o | $(LIBS)
 	$(CC) $(TOOLS_LDFLAGS) $^ $(TOOLS_LDLIBS) -o $@
 
 tools: $(TOOLS)
 
 clean-tools:
-	rm -rf $(BUILDDIR)/tools $(TOOLS)
+	rm -f $(TOOLS_BINS) $(TOOLS_OBJS) $(TOOLS_DEPS)
 
 install-tools: $(TOOLS)
 	install -m 0755 tools/villas.sh $(DESTDIR)$(PREFIX)/bin/villas
