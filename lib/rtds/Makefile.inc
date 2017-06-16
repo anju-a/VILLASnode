@@ -20,4 +20,5 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###################################################################################
 
-LIB_SRCS += $(wildcard lib/rtds/*.c)
+LIB_SRCS += $(wildcard lib/rtds/*.c) \
+            $(wildcard lib/rtds/rscad/*.c)

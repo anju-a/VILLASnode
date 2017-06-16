@@ -33,7 +33,7 @@
 
 #include "node.h"
 #include "list.h"
-#include "rtds/rscad.h"
+#include "rtds/rscad/inf.h"
 
 struct gtwif {
 	struct sockaddr_in remote;	/**< The IP / port address of the RTDS racks. */

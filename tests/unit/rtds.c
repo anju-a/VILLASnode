@@ -22,7 +22,7 @@
 
 #include <criterion/criterion.h>
 
-#include "rtds/rscad.h"
+#include "rtds/rscad/inf.h"
 #include "rtds/gtwif.h"
 
 #define PATH_INF "tests/data/rscad/vdiv.inf"

@@ -52,7 +52,8 @@ struct rscad_inf_element {
 	
 	union {
 		float f;
-		int i;
+		int   i;
+		char *s;
 	} init_value, min, max;
 	
 	int rack;
@@ -82,5 +83,7 @@ int rscad_inf_init(struct rscad_inf *i);
 int rscad_inf_parse(struct rscad_inf *i, FILE *f);
 
 int rscad_inf_destroy(struct rscad_inf *i);
+
+void rscad_inf_dump(struct rscad_inf *i);
 
 struct rscad_inf_element * rscad_inf_lookup_element(struct rscad_inf *i, const char *name);
