@@ -35,7 +35,12 @@ Test(rtds, gtwif)
 Test(rtds, rscad_inf)
 {
 	int ret;
-	struct rscad_inf i;
+	struct rscad_inf i = {
+		.elements = { .state = STATE_DESTROYED },
+		.attributes = { .state = STATE_DESTROYED },
+		.timing_records = { .state = STATE_DESTROYED }
+	};
+
 	struct rscad_inf_element *e;
 
 	FILE *f = fopen(PATH_INF, "r");
@@ -46,6 +51,8 @@ Test(rtds, rscad_inf)
 	
 	ret = rscad_inf_parse(&i, f);
 	cr_assert_eq(ret, 0);
+	
+	rscad_inf_dump(&i);
 	
 	e = rscad_inf_lookup_element(&i, "Subsystem #1|Sources|src|ABCmag");
 	cr_assert_not_null(e);
