@@ -43,7 +43,10 @@ struct gtwif {
 		int count;
 	} in, out;
 	
-	struct rscad_inf inffile;	/**< The RSCAD case information file. */
+	int rack;			/**< The rack number. Only used for checking if the .inf file is matching. */
+	const char *casename;		/**< The case name. Only used for checking if the .inf file is matching. */
+	
+	struct rscad_inf inf;		/**< The RSCAD case information file. */
 	
 	int sd;				/**< The socket descriptor. */
 	

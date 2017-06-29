@@ -28,10 +28,11 @@
 #include "timing.h"
 #include "nodes/gtwif.h"
 #include "rtds/gtwif.h"
+#include "rtds/rscad/inf.h"
 
 #define GTWIF_MAX_RATE		10.0
 
-static int gtwif_parse_direction(struct gtwif_direction *d, config_setting_t *cfg)
+static int gtwif_parse_direction(struct gtwif_direction *d, struct rscad_inf *inf, config_setting_t *cfg)
 {
 	if (config_setting_type(cfg) != CONFIG_TYPE_ARRAY)
 		cerror(cfg, "GTWIF node 'in' / 'out' must be any array of addresses or strings");
@@ -43,15 +44,21 @@ static int gtwif_parse_direction(struct gtwif_direction *d, config_setting_t *cf
 		config_setting_t *cfg_elm = config_setting_get_elem(cfg, i);
 		
 		switch (config_setting_type(cfg_elm)) {
-#if 0
 			case CONFIG_TYPE_STRING: {
-				const char *elm = config_setting_get_string(cfg, i);
+				struct rscad_inf_element *e;
+				const char *s;
 				
+				s = config_setting_get_string(cfg_elm);
+				e = list_lookup(&inf->elements, s);
+				if (!e)
+					cerror(cfg_elm, "Unknown element: %s", s);
 				
+				if (!e->address)
+					cerror(cfg_elm, "Invalid address %#x for element %s", e->address, s);
 				
+				d->addresses[i] = e->address;
 				break;
 			}
-#endif				
 			case CONFIG_TYPE_INT:
 				d->addresses[i] = config_setting_get_int(cfg);
 				break;
@@ -69,12 +76,45 @@ int gtwif_parse(struct node *n, config_setting_t *cfg)
 	struct gtwif *g = n->_vd;
 	
 	int ret;
-	const char *remote;
+	const char *remote, *inf, *casename;
 	config_setting_t *cfg_in, *cfg_out, *cfg_remote, *cfg_rate;
+	
+	ret = rscad_inf_init(&g->inf);
+	if (ret)
+		return ret;
+
+	if (config_setting_lookup_string(cfg, "inf", &inf)) {
+		FILE *f;
+		
+		/* Parse .inf file */
+		f = fopen(inf, "r");
+		if (!f)
+			serror("Cannot read RSCAD inf file: %s", inf);
+		
+		ret = rscad_inf_parse(&g->inf, f);
+		
+		fclose(f);
+		
+		if (ret)
+			return ret;
+
+		/* Verify that the .inf file matches provide case details. */
+		if (!config_setting_lookup_string(cfg, "case", &casename))
+			cerror(cfg, "The GTWIF node %s is missing a 'case' setting", node_name(n));
+		
+		if (!config_setting_lookup_int(cfg, "rack", &g->rack))
+			cerror(cfg, "The GTWIF node %s is missing a 'rack' setting", node_name(n));
+		
+		/** @todo check */
+	}
+	else {
+		g->rack = -1;
+		g->casename = NULL;
+	}
 
 	cfg_in = config_setting_get_member(cfg, "in");
 	if (cfg_in) {
-		ret = gtwif_parse_direction(&g->in, cfg_in);
+		ret = gtwif_parse_direction(&g->in, &g->inf, cfg_in);
 		if (ret)
 			cerror(cfg_in, "Failed to parse inputs of GTWIF node: %s", node_name(n)); 
 		
@@ -82,7 +122,7 @@ int gtwif_parse(struct node *n, config_setting_t *cfg)
 	
 	cfg_out = config_setting_get_member(cfg, "out");
 	if (cfg_out) {
-		ret = gtwif_parse_direction(&g->out, cfg_out);
+		ret = gtwif_parse_direction(&g->out, &g->inf, cfg_out);
 		if (ret)
 			cerror(cfg_out, "Failed to parse outputs of GTWIF node: %s", node_name(n)); 
 		
@@ -116,15 +156,39 @@ int gtwif_parse(struct node *n, config_setting_t *cfg)
 		g->remote.sin_port = htons(2);
 	}
 	else
-		cerror(cfg, "GTWIF node %s is missing setting 'rack'", node_name(n));
+		cerror(cfg, "The GTWIF node %s is missing setting 'rack'", node_name(n));
 
 	return 0;
 }
 
 char * gtwif_print(struct node *n)
 {
-	char *buf = NULL;
-	struct gtwif *g __attribute__((unused)) = n->_vd;
+	char remote[INET_ADDRSTRLEN], *buf = NULL;
+	struct gtwif *g = n->_vd;
+	
+	strcatf(&buf, "remote=%s", inet_ntop(AF_INET, (void *) &g->remote, remote, sizeof(remote)));
+	
+	if (g->rack > 0) {
+		strcatf(&buf, "case=%s", g->casename);
+		strcatf(&buf, "rack=%d", g->rack);
+	}
+	
+	strcatf(&buf, "rate=%f, ", g->rate);
+	strcatf(&buf, "timeout=%f, ", g->timeout);
+	
+	strcatf(&buf, "in = [");
+
+	for (int i = 0; i < g->in.count; i++)
+		strcatf(&buf, " %#x", g->in.addresses[i]);	
+
+	strcatf(&buf, " ],");
+	
+	strcatf(&buf, "out = [");
+
+	for (int i = 0; i < g->out.count; i++)
+		strcatf(&buf, " %#x", g->out.addresses[i]);
+
+	strcatf(&buf, " ],");
 
 	return buf;
 }
