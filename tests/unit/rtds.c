@@ -54,15 +54,17 @@ Test(rtds, rscad_inf)
 	
 	rscad_inf_dump(&i);
 	
-	e = rscad_inf_lookup_element(&i, "Subsystem #1|Sources|src|ABCmag");
+	e = list_lookup(&i.elements, "Subsystem #1|Node Voltages|S1) N1");
 	cr_assert_not_null(e);
 	
-	cr_assert_eq(e->address, 0x783014);
+	cr_assert_eq(e->address, 0x20000C);
 	cr_assert_eq(e->rack, 4);
 	cr_assert_eq(e->datatype, RSCAD_INF_DATATYPE_IEEE);
-	cr_assert_eq(e->init_value.f, 230.0);
 	cr_assert_eq(e->min.f, 0.0);
-	cr_assert_eq(e->max.f, 460.0);
+	cr_assert_eq(e->max.f, 1.0);
+	cr_assert_str_eq(e->units, "kV");
+	cr_assert_str_eq(e->group, "Subsystem #1|Node Voltages");
+	cr_assert_str_eq(e->description, "S1) N1");
 	
 	ret = rscad_inf_destroy(&i);
 	cr_assert_eq(ret, 0);

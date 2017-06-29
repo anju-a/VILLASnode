@@ -37,24 +37,31 @@ struct rscad_inf_timing_record {
 	
 };
 
+union rscad_inf_value {
+	float f;
+	int   i;
+	char *s;
+};
+
 struct rscad_inf_element {
-	enum {
+	char *name;
+	
+	enum rscad_inf_type {
 		RSCAD_INF_ELEMENT_STRING,
 		RSCAD_INF_ELEMENT_OUTPUT,
 		RSCAD_INF_ELEMENT_PUSHBUTTON,
 		RSCAD_INF_ELEMENT_SLIDER
 	} type;
 	
-	enum {
+	enum rscad_inf_datatype {
 		RSCAD_INF_DATATYPE_IEEE,
-		RSCAD_INF_DATATYPE_INT
+		RSCAD_INF_DATATYPE_INT,
+		RSCAD_INF_DATATYPE_STRING
 	} datatype;
 	
-	union {
-		float f;
-		int   i;
-		char *s;
-	} init_value, min, max;
+	union rscad_inf_value init_value;
+	union rscad_inf_value min;
+	union rscad_inf_value max;
 	
 	int rack;
 	uint32_t address;

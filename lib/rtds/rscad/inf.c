@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <regex.h>
 
 #include "utils.h"
 #include "log.h"
@@ -53,6 +54,53 @@ static int rscad_inf_getline(char **line, size_t *linelen, FILE *f)
 	return 1;
 }
 
+static int rscad_inf_getattr(char **line, char **key, char **value)
+{
+	int ret;
+
+	size_t kl, vl;
+	regex_t regex;
+	regmatch_t matches[4];
+	regmatch_t *km, *vm, *all;
+
+	ret = regcomp(&regex, "([a-z]+)=(\"([^\"]+)\"|[^\" ]+)", REG_EXTENDED | REG_ICASE);
+	if (ret) {
+		char buf[512];
+		regerror(ret, &regex, buf, sizeof(buf));
+		
+		warn("Failed to compile RE: %s", buf);
+		return ret;
+	}
+
+	ret = regexec(&regex, *line, 4, matches, 0);
+	if (ret)
+		return ret;
+
+	int quotes = matches[3].rm_so > 0;
+
+	all = &matches[0];
+	km  = &matches[1];
+	vm  = &matches[quotes ? 3 : 2];
+	
+	kl = km->rm_eo - km->rm_so;
+	vl = vm->rm_eo - vm->rm_so;
+	
+	*key   = realloc(*key,   kl + 1);
+	*value = realloc(*value, vl + 1);
+
+	strncpy(*key,   *line + km->rm_so, kl);
+	strncpy(*value, *line + vm->rm_so, vl);	
+	
+	(*key)[kl] = '\0';
+	(*value)[vl] = '\0';
+	
+	*line += all->rm_eo;
+
+	regfree(&regex);
+	
+	return 0;
+}
+
 static int rscad_inf_destroy_attribute(struct rscad_inf_attribute *a)
 {
 	if (a->key)
@@ -74,6 +122,9 @@ static int rscad_inf_destroy_element(struct rscad_inf_element *e)
 
 	if (e->units)
 		free(e->units);
+	
+	if (e->name)
+		free(e->name);
 	
 	if (e->type == RSCAD_INF_ELEMENT_STRING && e->init_value.s)
 		free(e->init_value.s);
@@ -121,52 +172,60 @@ static int rscad_inf_parse_attributes(struct list *l, FILE *f)
 	return 0;
 }
 
+static int rscad_inf_parse_value(const char *value, enum rscad_inf_datatype dt, union rscad_inf_value *v)
+{
+	char *endptr;
+		
+	switch (dt) {
+		case RSCAD_INF_DATATYPE_IEEE:
+			v->f = strtod(value, &endptr);
+			break;
+
+		case RSCAD_INF_DATATYPE_INT:
+			v->i = strtoul(value, &endptr, 10);
+			break;
+
+		case RSCAD_INF_DATATYPE_STRING:
+			v->s = strdup(value);
+			break;
+
+		default:
+			return -1;
+	}
+
+	return value == endptr;
+}
+
 static int rscad_inf_parse_elements(struct list *l, FILE *f)
 {
-	int ret = 0;
-	char *line = NULL;
+	int ret;
+	char *line = NULL, *key = NULL, *value = NULL;
 	size_t linelen = 0;
-	
+
 	while (rscad_inf_getline(&line, &linelen, f)) {
-		struct rscad_inf_element e;
+		char *type, *attrs;
 		
-		int i = 0;
-		char *p = line;
+		type = line;
 		
-		/* Handwritten tokenizer */
-		char *tokens[32];
-		bool inquote = false;
+		attrs = strchr(line, ' ');
+		if (!attrs)
+			goto fail;
 		
-		while (*p && i < 32) {
-			/* Skip leading whitespace */
-			while (*p == ' ')
-				p++;
-			
-			/* Save token */
-			tokens[i] = p;
-			
-			while (*p) {
-				if (inquote) {
-					if (*p == '"') {
-						inquote = false;
-						break;
-					}
-				}
-				else {
-					if (*p == ' ' || *p == '=')
-						break;
-				}
-				
-				p++;
-			}
-			
-			*p = '\0';
-			
-			i++;
-		}
-		tokens[i] = NULL;
+		*attrs++ = '\0';
 		
-		
+		struct rscad_inf_element e = {
+			.name = NULL,
+			.description = NULL,
+			.group = NULL,
+			.units = NULL,
+			.address = -1,
+			.rack = -1,
+			.datatype = RSCAD_INF_DATATYPE_STRING,
+			.init_value.i = 0,
+			.min.i = 0,
+			.max.i = 0
+		};
+
 		if      (!strcmp(type, "String"))
 			e.type = RSCAD_INF_ELEMENT_STRING;
 		else if (!strcmp(type, "Output"))
@@ -176,21 +235,59 @@ static int rscad_inf_parse_elements(struct list *l, FILE *f)
 		else if (!strcmp(type, "Slider"))
 			e.type = RSCAD_INF_ELEMENT_SLIDER;
 		else
-			goto warn;
+			goto fail;
 		
-		while (1) {
-			scanf(line, "%")
-			
+		while (rscad_inf_getattr(&attrs, &key, &value) == 0) {
+			if      (!strcmp(key, "Desc"))
+				e.description = strdup(value);
+			else if (!strcmp(key, "Group"))
+				e.group = strdup(value);
+			else if (!strcmp(key, "Units"))
+				e.units = strdup(value);
+			else if (!strcmp(key, "Adr"))
+				e.address = strtoul(value, NULL, 16);
+			else if (!strcmp(key, "Rack"))
+				e.rack = strtoul(value, NULL, 10);
+			else if (!strcmp(key, "Type")) {
+				if      (!strcmp(value, "INT"))
+					e.datatype = RSCAD_INF_DATATYPE_INT;
+				else if (!strcmp(value, "IEEE"))
+					e.datatype = RSCAD_INF_DATATYPE_IEEE;
+				else
+					goto fail;
+			}
+			else if (!strcmp(key, "InitValue")) {
+				ret = rscad_inf_parse_value(value, e.datatype, &e.init_value);
+				if (ret)
+					goto fail;
+			}
+			else if (!strcmp(key, "Min")) {
+				ret = rscad_inf_parse_value(value, e.datatype, &e.min);
+				if (ret)
+					goto fail;
+			}
+			else if (!strcmp(key, "Max")) {
+				ret = rscad_inf_parse_value(value, e.datatype, &e.max);
+				if (ret)
+					goto fail;
+			}
+			else
+				goto fail;
 		}
 		
+		if (e.group && e.description)
+			strcatf(&e.name, "%s|%s", e.group, e.description);
+
 		list_push(l, memdup(&e, sizeof(e)));
-		
+
 		continue;
-warn:
+fail:
 		warn("Failed to parse element: %s", line);
 	}
 
 	free(line);
+	free(key);
+	free(value);
 
 	return 0;
 }
@@ -230,7 +327,7 @@ void rscad_inf_dump(struct rscad_inf *i)
 	for (size_t j = 0; j < list_length(&i->elements); j++) {
 		struct rscad_inf_element *e = list_at(&i->elements, j);
 		
-		info("Element: type=%d", e->type);
+		info("Element: %s", e->name);
 	}
 }
 
