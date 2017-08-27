@@ -21,7 +21,7 @@
 ###################################################################################
 
 DEPS_CMAKE = libxil libwebsockets criterion jansson nanomsg
-DEPS_AUTOCONF = libnl libconfig libcurl libzmq
+DEPS_AUTOCONF = libnl libconfig libcurl libzmq hdf5
 
 DEPS = $(DEPS_CMAKE) $(DEPS_AUTOCONF)
 

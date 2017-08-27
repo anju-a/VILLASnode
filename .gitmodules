@@ -31,3 +31,6 @@
 [submodule "thirdparty/libzmq"]
 	path = thirdparty/libzmq
 	url = https://github.com/zeromq/libzmq.git
+[submodule "thirdparty/hdf5"]
+	path = thirdparty/hdf5
+	url = https://bitbucket.hdfgroup.org/scm/hdffv/hdf5.git
