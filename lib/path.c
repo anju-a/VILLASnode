@@ -20,76 +20,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *********************************************************************************/
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <string.h>
-#include <inttypes.h>
-#include <poll.h>
-
+#include <villas/common.h>
 #include <villas/config.h>
 #include <villas/utils.h>
+#include <villas/node.h>
 #include <villas/path.h>
-#include <villas/timing.h>
-#include <villas/pool.h>
-#include <villas/queue.h>
+#include <villas/path_destination.h>
+#include <villas/path_source.h>
+#include <villas/path_worker.h>
 #include <villas/hook.h>
 #include <villas/plugin.h>
-#include <villas/memory.h>
-#include <villas/stats.h>
-#include <villas/node.h>
+#include <villas/mapping.h>
 
-static int path_source_init(struct path_source *ps)
+struct path_worker *worker = NULL;
+
+void path_process(struct path *p, struct sample *smps[], unsigned cnt)
 {
-	int ret;
-
-	ret = pool_init(&ps->pool, MAX(DEFAULT_QUEUELEN, ps->node->vectorize), SAMPLE_LEN(ps->node->samplelen), &memtype_hugepage);
-	if (ret)
-		return ret;
-
-	return 0;
-}
-
-static int path_source_destroy(struct path_source *ps)
-{
-	int ret;
-
-	ret = pool_destroy(&ps->pool);
-	if (ret)
-		return ret;
-
-	ret = list_destroy(&ps->mappings, NULL, true);
-	if (ret)
-		return ret;
-
-	return 0;
-}
-
-static int path_destination_init(struct path_destination *pd, int queuelen)
-{
-	int ret;
-
-	ret = queue_init(&pd->queue, queuelen, &memtype_hugepage);
-	if (ret)
-		return ret;
-
-	return 0;
-}
-
-static int path_destination_destroy(struct path_destination *pd)
-{
-	int ret;
-
-	ret = queue_destroy(&pd->queue);
-	if (ret)
-		return ret;
-
-	return 0;
-}
-
-static void path_destination_enqueue(struct path *p, struct sample *smps[], unsigned cnt)
-{
-	unsigned enqueued, cloned;
+	unsigned enqueued, cloned, processed;
 
 	struct sample *clones[cnt];
 
@@ -97,10 +44,15 @@ static void path_destination_enqueue(struct path *p, struct sample *smps[], unsi
 	if (cloned < cnt)
 		warn("Pool underrun in path %s", path_name(p));
 
+	/* Run processing hooks */
+	processed = hook_process_list(&p->hooks, clones, cloned);
+	if (processed == 0)
+		return;
+
 	for (size_t i = 0; i < list_length(&p->destinations); i++) {
 		struct path_destination *pd = (struct path_destination *) list_at(&p->destinations, i);
 
-		enqueued = queue_push_many(&pd->queue, (void **) clones, cloned);
+		enqueued = queue_signalled_push_many(&pd->queue, (void **) clones, cloned);
 		if (enqueued != cnt)
 			warn("Queue overrun for path %s", path_name(p));
 
@@ -113,133 +65,13 @@ static void path_destination_enqueue(struct path *p, struct sample *smps[], unsi
 	sample_put_many(clones, cloned);
 }
 
-/** Main thread function per path: read samples -> write samples */
-static void * path_run(void *arg)
+struct path * path_create()
 {
-	int ret, recv, tomux, ready, cnt;
-	struct path *p = arg;
+	struct path *p;
 
-	for (;;) {
-		ret = poll(p->reader.pfds, p->reader.nfds, -1);
-		if (ret < 0)
-			serror("Failed to poll");
-
-		for (int i = 0; i < p->reader.nfds; i++) {
-			struct path_source *ps = (struct path_source *) list_at(&p->sources, i);
-
-			if (p->reader.pfds[i].revents & POLLIN) {
-				/* Timeout: re-enqueue the last sample */
-				if (p->reader.pfds[i].fd == task_fd(&p->timeout)) {
-					task_wait(&p->timeout);
-
-					p->last_sample->sequence = p->last_sequence++;
-
-					path_destination_enqueue(p, &p->last_sample, 1);
-				}
-				/* A source is ready to receive samples */
-				else {
-					cnt = ps->node->vectorize;
-
-					struct sample *read_smps[cnt];
-					struct sample *muxed_smps[cnt];
-					struct sample **tomux_smps;
-
-					/* Fill smps[] free sample blocks from the pool */
-					ready = sample_alloc_many(&ps->pool, read_smps, cnt);
-					if (ready != cnt)
-						warn("Pool underrun for path source %s", node_name(ps->node));
-
-					/* Read ready samples and store them to blocks pointed by smps[] */
-					recv = node_read(ps->node, read_smps, ready);
-					if (recv == 0)
-						goto out2;
-					else if (recv < 0)
-						error("Failed to read samples from node %s", node_name(ps->node));
-					else if (recv < ready)
-						warn("Partial read for path %s: read=%u, expected=%u", path_name(p), recv, ready);
-
-					bitset_set(&p->received, i);
-
-					if (p->mode == PATH_MODE_ANY) { /* Mux all samples */
-						tomux_smps = read_smps;
-						tomux = recv;
-					}
-					else { /* Mux only last sample and discard others */
-						tomux_smps = read_smps + recv - 1;
-						tomux = 1;
-					}
-
-					for (int i = 0; i < tomux; i++) {
-						muxed_smps[i] = i == 0
-							? sample_clone(p->last_sample)
-							: sample_clone(muxed_smps[i-1]);
-
-						muxed_smps[i]->sequence = p->last_sequence++;
-
-						mapping_remap(&ps->mappings, muxed_smps[i], tomux_smps[i], NULL);
-					}
-
-					sample_copy(p->last_sample, muxed_smps[tomux-1]);
-
-					debug(15, "Path %s received = %s", path_name(p), bitset_dump(&p->received));
-
-					if (bitset_test(&p->mask, i)) {
-						/* Check if we received an update from all nodes/ */
-						if ((p->mode == PATH_MODE_ANY) ||
-						    (p->mode == PATH_MODE_ALL && !bitset_cmp(&p->mask, &p->received)))
-						{
-							path_destination_enqueue(p, muxed_smps, tomux);
-
-							/* Reset bitset of updated nodes */
-							bitset_clear_all(&p->received);
-						}
-					}
-
-					sample_put_many(muxed_smps, tomux);
-out2:					sample_put_many(read_smps, ready);
-				}
-			}
-		}
-
-		for (size_t i = 0; i < list_length(&p->destinations); i++) {
-			struct path_destination *pd = (struct path_destination *) list_at(&p->destinations, i);
-
-			int cnt = pd->node->vectorize;
-			int sent;
-			int available;
-			int released;
-
-			struct sample *smps[cnt];
-
-			/* As long as there are still samples in the queue */
-			while (1) {
-				available = queue_pull_many(&pd->queue, (void **) smps, cnt);
-				if (available == 0)
-					break;
-				else if (available < cnt)
-					debug(LOG_PATH | 5, "Queue underrun for path %s: available=%u expected=%u", path_name(p), available, cnt);
-
-				debug(LOG_PATH | 15, "Dequeued %u samples from queue of node %s which is part of path %s", available, node_name(pd->node), path_name(p));
-
-				sent = node_write(pd->node, smps, available);
-				if (sent < 0)
-					error("Failed to sent %u samples to node %s", cnt, node_name(pd->node));
-				else if (sent < available)
-					warn("Partial write to node %s: written=%d, expected=%d", node_name(pd->node), sent, available);
-
-				released = sample_put_many(smps, sent);
-
-				debug(LOG_PATH | 15, "Released %d samples back to memory pool", released);
-			}
-		}
-	}
-
-	return NULL;
-}
-
-int path_init(struct path *p)
-{
-	assert(p->state == STATE_DESTROYED);
+	p = alloc(sizeof(struct path));
+	if (!p)
+		return NULL;
 
 	list_init(&p->destinations);
 	list_init(&p->sources);
@@ -272,7 +104,7 @@ int path_init(struct path *p)
 
 			ret = hook_init(h, vt, p, NULL);
 			if (ret)
-				return ret;
+				return NULL;
 
 			list_push(&p->hooks, h);
 		}
@@ -281,58 +113,47 @@ int path_init(struct path *p)
 
 	p->state = STATE_INITIALIZED;
 
-	return 0;
+	return p;
 }
 
-int path_init2(struct path *p)
+int path_init(struct path *p)
 {
 	int ret;
+	struct sample *previous;
 
 	assert(p->state == STATE_CHECKED);
 
-#ifdef WITH_HOOKS
-	/* We sort the hooks according to their priority before starting the path */
-	list_sort(&p->hooks, hook_cmp_priority);
-#endif /* WITH_HOOKS */
-
-	/* Initialize destinations */
-	for (size_t i = 0; i < list_length(&p->destinations); i++) {
-		struct path_destination *pd = (struct path_destination *) list_at(&p->destinations, i);
-
-		ret = path_destination_init(pd, p->queuelen);
-		if (ret)
-			return ret;
-	}
-
-	/* Initialize sources */
-	for (size_t i = 0; i < list_length(&p->sources); i++) {
-		struct path_source *ps = (struct path_source *) list_at(&p->sources, i);
-
-		ret = path_source_init(ps);
-		if (ret)
-			return ret;
+	/* Create worker if not existant */
+	if (!worker) {
+		worker = path_worker_create();
+		if (!worker)
+			error("Failed to create path worker");
 	}
 
 	bitset_init(&p->received, list_length(&p->sources));
 	bitset_init(&p->mask, list_length(&p->sources));
 
-	/* Calc sample length of path and initialize bitset */
+#ifdef WITH_HOOKS
+	hook_sort(&p->hooks);
+#endif
+
+	/* Initialize destinations */
+	for (size_t i = 0; i < list_length(&p->destinations); i++) {
+		struct path_destination *pd = (struct path_destination *) list_at(&p->destinations, i);
+
+		ret = path_destination_init(pd, p);
+		if (ret)
+			return ret;
+	}
+
+	/* Initialize sources */
 	p->samplelen = 0;
 	for (size_t i = 0; i < list_length(&p->sources); i++) {
 		struct path_source *ps = (struct path_source *) list_at(&p->sources, i);
 
-		if (ps->masked)
-			bitset_set(&p->mask, i);
-
-		for (size_t i = 0; i < list_length(&ps->mappings); i++) {
-			struct mapping_entry *me = (struct mapping_entry *) list_at(&ps->mappings, i);
-
-			int len = me->length;
-			int off = me->offset;
-
-			if (off + len > p->samplelen)
-				p->samplelen = off + len;
-		}
+		ret = path_source_init(ps, p, i);
+		if (ret)
+			return ret;
 	}
 
 	if (!p->samplelen)
@@ -342,36 +163,14 @@ int path_init2(struct path *p)
 	if (ret)
 		return ret;
 
-	p->last_sample = sample_alloc(&p->pool);
-	if (!p->last_sample)
+	previous = sample_alloc(&p->pool);
+	if (!previous)
 		return -1;
 
-	/* Prepare poll() */
-	int nfds = list_length(&p->sources);
+	previous->sequence = 0;
+	previous->length = p->samplelen;
 
-	if (p->rate > 0)
-		nfds++;
-
-	p->reader.nfds = nfds;
-	p->reader.pfds = alloc(sizeof(struct pollfd) * p->reader.nfds);
-
-	for (int i = 0; i < list_length(&p->sources); i++) {
-		struct path_source *ps = (struct path_source *) list_at(&p->sources, i);
-
-		/* This slot is only used if it is not masked */
-		p->reader.pfds[i].events = POLLIN;
-		p->reader.pfds[i].fd = node_fd(ps->node);
-	}
-
-	/* We use the last slot for the timeout timer. */
-	if (p->rate > 0) {
-		ret = task_init(&p->timeout, p->rate, CLOCK_MONOTONIC);
-		if (ret)
-			return ret;
-
-		p->reader.pfds[nfds-1].fd = task_fd(&p->timeout);
-		p->reader.pfds[nfds-1].events = POLLIN;
-	}
+	atomic_init(&p->previous, previous);
 
 	return 0;
 }
@@ -446,14 +245,11 @@ int path_parse(struct path *p, json_t *cfg, struct list *nodes)
 		}
 
 		if (!ps) {
-			ps = alloc(sizeof(struct path_source));
+			ps = path_source_create();
+			if (!ps)
+				error("Failed to create path source");
 
 			ps->node = me->node;
-			ps->masked = false;
-
-			ps->mappings.state = STATE_DESTROYED;
-
-			list_init(&ps->mappings);
 
 			list_push(&p->sources, ps);
 		}
@@ -464,7 +260,11 @@ int path_parse(struct path *p, json_t *cfg, struct list *nodes)
 	for (size_t i = 0; i < list_length(&destinations); i++) {
 		struct node *n = (struct node *) list_at(&destinations, i);
 
-		struct path_destination *pd = (struct path_destination *) alloc(sizeof(struct path_destination));
+		struct path_destination *pd;
+
+		pd = path_destination_create();
+		if (!pd)
+			error("Failed to create path destination");
 
 		pd->node = n;
 
@@ -603,35 +403,7 @@ int path_start(struct path *p)
 	}
 #endif /* WITH_HOOKS */
 
-	p->last_sequence = 0;
-
 	bitset_clear_all(&p->received);
-
-	/* We initialize the intial sample with zeros */
-	for (size_t i = 0; i < list_length(&p->sources); i++) {
-		struct path_source *ps = (struct path_source *) list_at(&p->sources, i);
-
-		for (size_t j = 0; j < list_length(&ps->mappings); j++) {
-			struct mapping_entry *me = (struct mapping_entry *) list_at(&ps->mappings, j);
-
-			int len = me->length;
-			int off = me->offset;
-
-			if (len + off > p->last_sample->length)
-				p->last_sample->length = len + off;
-
-			for (int k = off; k < off + len; k++) {
-				p->last_sample->data[k].f = 0;
-
-				sample_set_data_format(p->last_sample, k, SAMPLE_DATA_FORMAT_FLOAT);
-			}
-		}
-	}
-
-	/* Start one thread per path for sending to destinations */
-	ret = pthread_create(&p->tid, NULL, &path_run, p);
-	if (ret)
-		return ret;
 
 	p->state = STATE_STARTED;
 
@@ -646,14 +418,6 @@ int path_stop(struct path *p)
 		return 0;
 
 	info("Stopping path: %s", path_name(p));
-
-	ret = pthread_cancel(p->tid);
-	if (ret)
-		return ret;
-
-	ret = pthread_join(p->tid, NULL);
-	if (ret)
-		return ret;
 
 #ifdef WITH_HOOKS
 	for (size_t i = 0; i < list_length(&p->hooks); i++) {
@@ -681,16 +445,11 @@ int path_destroy(struct path *p)
 	list_destroy(&p->sources, (dtor_cb_t) path_source_destroy, true);
 	list_destroy(&p->destinations, (dtor_cb_t) path_destination_destroy, true);
 
-	if (p->reader.pfds)
-		free(p->reader.pfds);
-
 	if (p->_name)
 		free(p->_name);
 
 	if (p->rate > 0)
 		task_destroy(&p->timeout);
-
-	pool_destroy(&p->pool);
 
 	p->state = STATE_DESTROYED;
 

@@ -31,6 +31,14 @@
 #include <villas/plugin.h>
 #include <villas/config_helper.h>
 
+static int hook_cmp_priority(const void *a, const void *b)
+{
+	struct hook *ha = (struct hook *) a;
+	struct hook *hb = (struct hook *) b;
+
+	return ha->priority - hb->priority;
+}
+
 int hook_init(struct hook *h, struct hook_type *vt, struct path *p, struct node *n)
 {
 	int ret;
@@ -232,12 +240,9 @@ int hook_write_list(struct list *hs, struct sample *smps[], unsigned cnt)
 	return hook_run_list(hs, smps, cnt, hook_write);
 }
 
-int hook_cmp_priority(const void *a, const void *b)
+void hook_sort(struct list *hs)
 {
-	struct hook *ha = (struct hook *) a;
-	struct hook *hb = (struct hook *) b;
-
-	return ha->priority - hb->priority;
+	list_sort(hs, hook_cmp_priority);
 }
 
 int hook_parse_list(struct list *list, json_t *cfg, struct path *o, struct node *n)

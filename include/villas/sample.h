@@ -104,6 +104,8 @@ struct sample {
 	} data[];		/**< Data is in host endianess! */
 };
 
+typedef _Atomic(struct sample *) atomic_smpptr_t;
+
 /** Get the address of the pool to which the sample belongs. */
 #define sample_pool(s) ((struct pool *) ((char *) (s) + (s)->pool_off))
 

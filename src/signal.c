@@ -38,7 +38,7 @@
 #include <villas/nodes/signal.h>
 
 /* Some default values */
-struct node n;
+struct node *n;
 struct log l;
 struct io io;
 struct pool q;
@@ -77,11 +77,11 @@ static void quit(int signal, siginfo_t *sinfo, void *ctx)
 {
 	int ret;
 
-	ret = node_stop(&n);
+	ret = node_stop(n);
 	if (ret)
 		error("Failed to stop node");
 
-	ret = node_destroy(&n);
+	ret = node_destroy(n);
 	if (ret)
 		error("Failed to destroy node");
 
@@ -128,8 +128,8 @@ int main(int argc, char *argv[])
 	if (!p)
 		error("Signal generation is not supported.");
 
-	ret = node_init(&n, &p->node);
-	if (ret)
+	n = node_create(&p->node);
+	if (!n)
 		error("Failed to initialize node");
 
 	p = plugin_lookup(PLUGIN_TYPE_IO, format);
@@ -144,28 +144,28 @@ int main(int argc, char *argv[])
 	if (ret)
 		error("Failed to open output");
 
-	ret = node_parse_cli(&n, argc, argv);
+	ret = node_parse_cli(n, argc, argv);
 	if (ret) {
 		usage();
 		exit(EXIT_FAILURE);
 	}
 
-	ret = node_check(&n);
+	ret = node_check(n);
 	if (ret)
 		error("Failed to verify node configuration");
 
-	ret = pool_init(&q, 16, SAMPLE_LEN(n.samplelen), &memtype_heap);
+	ret = pool_init(&q, 16, SAMPLE_LEN(n->samplelen), &memtype_heap);
 	if (ret)
 		error("Failed to initialize pool");
 
-	ret = node_start(&n);
+	ret = node_start(n);
 	if (ret)
 		serror("Failed to start node");
 
 	for (;;) {
 		t = sample_alloc(&q);
 
-		node_read(&n, &t, 1);
+		node_read(n, &t, 1);
 		io_print(&io, &t, 1);
 
 		sample_put(t);

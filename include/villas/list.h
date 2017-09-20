@@ -15,8 +15,9 @@
 
 #include <stdbool.h>
 #include <pthread.h>
+#include <sys/types.h>
 
-#include "common.h"
+#include <villas/common.h>
 
 #define LIST_CHUNKSIZE		16
 
@@ -95,6 +96,9 @@ void list_remove(struct list *l, void *p);
  * @see Only possible because of §1424 of http://c0x.coding-guidelines.com/6.7.2.1.html
  */
 void * list_lookup(struct list *l, const char *name);
+
+/* Return the index of pointer p in list, or -1 if not found */
+ssize_t list_index(struct list *l, void *p);
 
 /** Return the first element of the list for which cmp returns zero */
 void * list_search(struct list *l, cmp_cb_t cmp, void *ctx);

@@ -59,6 +59,8 @@ struct node
 
 	struct list hooks;	/**< List of write hooks (struct hook). */
 
+	struct path_reader *reader;
+
 	enum state state;
 
 	struct node_type *_vt;	/**< Virtual functions (C++ OOP style) */
@@ -67,9 +69,9 @@ struct node
 	json_t *cfg;		/**< A JSON object containing the configuration of the node. */
 };
 
-int node_init(struct node *n, struct node_type *vt);
+struct node * node_create(struct node_type *vt);
 
-int node_init2(struct node *n);
+int node_init(struct node *n);
 
 /** Parse settings of a node.
  *

@@ -31,11 +31,14 @@
 #include <villas/mapping.h>
 #include <villas/timing.h>
 
-int node_init(struct node *n, struct node_type *vt)
+struct node * node_create(struct node_type *vt)
 {
 	static int max_id;
+	struct node *n;
 
-	assert(n->state == STATE_DESTROYED);
+	n = alloc(sizeof(struct node));
+	if (!n)
+		return NULL;
 
 	n->_vt = vt;
 	n->_vd = alloc(vt->size);
@@ -70,7 +73,7 @@ int node_init(struct node *n, struct node_type *vt)
 
 			ret = hook_init(h, vt, NULL, n);
 			if (ret)
-				return ret;
+				return NULL;
 
 			list_push(&n->hooks, h);
 		}
@@ -79,14 +82,13 @@ int node_init(struct node *n, struct node_type *vt)
 
 	n->state = STATE_INITIALIZED;
 
-	return 0;
+	return n;
 }
 
-int node_init2(struct node *n)
+int node_init(struct node *n)
 {
 #ifdef WITH_HOOKS
-	/* We sort the hooks according to their priority before starting the path */
-	list_sort(&n->hooks, hook_cmp_priority);
+	hook_sort(&n->hooks);
 #endif
 
 	return 0;

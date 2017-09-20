@@ -181,6 +181,16 @@ out:	pthread_mutex_unlock(&l->lock);
 	return e;
 }
 
+ssize_t list_index(struct list *l, void *p)
+{
+	for (size_t i = 0; i < list_length(l); i++) {
+		if (p == list_at(l, i))
+			return i;
+	}
+
+	return -1;
+}
+
 void list_sort(struct list *l, cmp_cb_t cmp)
 {
 	pthread_mutex_lock(&l->lock);

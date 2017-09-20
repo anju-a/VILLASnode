@@ -1,4 +1,4 @@
-/** Message paths
+/** Path.
  *
  * @file
  * @author Steffen Vogel <stvogel@eonerc.rwth-aachen.de>
@@ -32,55 +32,28 @@
 #include <pthread.h>
 #include <jansson.h>
 
-#include "list.h"
-#include "queue.h"
-#include "pool.h"
-#include "bitset.h"
-#include "common.h"
-#include "hook.h"
-#include "mapping.h"
-#include "task.h"
-
-/* Forward declarations */
-struct stats;
-struct node;
-struct super_node;
-
-struct path_source {
-	struct node *node;
-
-	bool masked;
-
-	struct pool pool;
-	struct list mappings;			/**< List of mappings (struct mapping_entry). */
-};
-
-struct path_destination {
-	struct node *node;
-
-	struct queue queue;
-};
+#include <villas/list.h>
+#include <villas/pool.h>
+#include <villas/bitset.h>
+#include <villas/common.h>
+#include <villas/sample.h>
+#include <villas/task.h>
 
 /** The register mode determines under which condition the path is triggered. */
 enum path_mode {
-	PATH_MODE_ANY,				/**< The path is triggered whenever one of the sources receives samples. */
-	PATH_MODE_ALL				/**< The path is triggered only after all sources have received at least 1 sample. */
+	PATH_MODE_ANY,			/**< The path is triggered whenever one of the sources receives samples. */
+	PATH_MODE_ALL			/**< The path is triggered only after all sources have received at least 1 sample. */
 };
 
 /** The datastructure for a path. */
 struct path {
-	enum state state;			/**< Path state. */
+	enum state state;		/**< Path state. */
 
 	enum path_mode mode;		/**< Determines when this path is triggered. */
 
-	struct {
-		int nfds;
-		struct pollfd *pfds;
-	} reader;
-
 	struct pool pool;
-	struct sample *last_sample;
-	int last_sequence;
+
+	atomic_smpptr_t previous;	/**< A pointer to the previously processed sample of this path. */
 
 	struct list sources;		/**< List of all incoming nodes (struct path_source). */
 	struct list destinations;	/**< List of all outgoing nodes (struct path_destination). */
@@ -99,14 +72,13 @@ struct path {
 	struct bitset mask;		/**< A mask of path_sources which are enabled for poll(). */
 	struct bitset received;		/**< A mask of path_sources for which we already received samples. */
 
-	pthread_t tid;			/**< The thread id for this path. */
 	json_t *cfg;			/**< A JSON object containing the configuration of the path. */
 };
 
 /** Initialize internal data structures. */
-int path_init(struct path *p);
+struct path * path_create();
 
-int path_init2(struct path *p);
+int path_init(struct path *p);
 
 /** Check if path configuration is proper. */
 int path_check(struct path *p);
@@ -153,9 +125,6 @@ const char * path_name(struct path *p);
 /** Reverse a path */
 int path_reverse(struct path *p, struct path *r);
 
-/** Check if node is used as source or destination of a path. */
-int path_uses_node(struct path *p, struct node *n);
-
 /** Parse a single path and add it to the global configuration.
  *
  * @param cfg A JSON object containing the configuration of the path.
@@ -165,5 +134,9 @@ int path_uses_node(struct path *p, struct node *n);
  * @retval <0 Error. Something went wrong.
  */
 int path_parse(struct path *p, json_t *cfg, struct list *nodes);
+
+int path_uses_node(struct path *p, struct node *n);
+
+void path_process(struct path *p, struct sample *smps[], unsigned cnt);
 
 /** @} */

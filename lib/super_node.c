@@ -252,10 +252,10 @@ int super_node_parse_json(struct super_node *sn, json_t *cfg)
 			if (!p)
 				error("Invalid node type: %s", type);
 
-			struct node *n = (struct node *) alloc(sizeof(struct node));
+			struct node *n;
 
-			ret = node_init(n, &p->node);
-			if (ret)
+			n = node_create(&p->node);
+			if (!n)
 				error("Failed to initialize node");
 
 			ret = node_parse(n, json_node, name);
@@ -274,10 +274,10 @@ int super_node_parse_json(struct super_node *sn, json_t *cfg)
 		size_t index;
 		json_t *json_path;
 		json_array_foreach(json_paths, index, json_path) {
-			struct path *p = (struct path *) alloc(sizeof(struct path));
+			struct path *p;
 
-			ret = path_init(p);
-			if (ret)
+			p = path_create();
+			if (!p)
 				error("Failed to initialize path");
 
 			ret = path_parse(p, json_path, &sn->nodes);
@@ -287,10 +287,10 @@ int super_node_parse_json(struct super_node *sn, json_t *cfg)
 			list_push(&sn->paths, p);
 
 			if (p->reverse) {
-				struct path *r = (struct path *) alloc(sizeof(struct path));
+				struct path *r;
 
-				ret = path_init(r);
-				if (ret)
+				r = path_create();
+				if (!r)
 					error("Failed to init path");
 
 				ret = path_reverse(p, r);
@@ -366,7 +366,7 @@ int super_node_start(struct super_node *sn)
 
 		int refs = list_count(&sn->paths, (cmp_cb_t) path_uses_node, n);
 		if (refs > 0) { INDENT
-			ret = node_init2(n);
+			ret = node_init(n);
 			if (ret)
 				error("Failed to start node: %s", node_name(n));
 
@@ -383,7 +383,7 @@ int super_node_start(struct super_node *sn)
 		struct path *p = (struct path *) list_at(&sn->paths, i);
 
 		if (p->enabled) { INDENT
-			ret = path_init2(p);
+			ret = path_init(p);
 			if (ret)
 				error("Failed to start path: %s", path_name(p));
 

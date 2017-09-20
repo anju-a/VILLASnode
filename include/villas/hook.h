@@ -78,8 +78,8 @@ int hook_read_list(struct list *hs, struct sample *smps[], unsigned cnt);
 int hook_process_list(struct list *hs, struct sample *smps[], unsigned cnt);
 int hook_write_list(struct list *hs, struct sample *smps[], unsigned cnt);
 
-/** Compare two hook functions with their priority. Used by list_sort() */
-int hook_cmp_priority(const void *a, const void *b);
+/** We sort the hooks according to their priority before starting nodes/paths */
+void hook_sort(struct list *hs);
 
 /** Parses an object of hooks
  *

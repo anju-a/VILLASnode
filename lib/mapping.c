@@ -240,6 +240,7 @@ int mapping_update(struct mapping_entry *me, struct sample *remapped, struct sam
 	if (!len)
 		len = original->length;
 
+	/* check if sample capacity is sufficient */
 	if (len + off > remapped->capacity)
 		return -1;
 
