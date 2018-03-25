@@ -53,3 +53,5 @@ clean-plugins:
 	rm -rf $(BUILDDIR)/plugins $(PLUGINS)
 
 .PHONY: plugins install-plugins clean-plugins
+
+include $(SRCDIR)/plugins/fmi/Makefile.inc

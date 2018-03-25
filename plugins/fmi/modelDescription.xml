@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF8"?>
+<!--  FMI2 Model Description.
+ *
+ * @file
+ * @author Steffen Vogel <stvogel@eonerc.rwth-aachen.de>
+ * @copyright 2017, Institute for Automation of Complex Power Systems, EONERC
+ * @license GNU General Public License (version 3)
+ *
+ * VILLASnode
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ********************************************************************************* -->
+
+<fmiModelDescription
+	fmiVersion="2.0"
+	modelName="VILLASnode"
+	guid="{86adbd39-06c4-45f5-900c-808487672495}"
+	author="Steffen Vogel"
+	description="Functional Mockup Interfaces for VILLASnode"
+	version="1.0"
+	license="GPL-3"
+	copyright="Institute for Automation of Complex Power Systems, EONERC"
+	generationTool="VILLASnode"
+	generationDateAndTime="2018-03-08T16:57:33Z"
+	variableNamingConvention="structured">
+	<CoSimulation
+		modelIdentifier="villas-fmi"
+		needsExecutionTool="true"
+		canHandleVariableCommunicationStepSize="true"
+		canInterpolateInputs="false"
+		maxOutputDerivativeOrder="0"
+		canRunAsynchronuously="true"
+		canBeInstantiatedOnlyOncePerProcess="false"
+		canNotUseMemoryManagementFunctions="false"
+		canGetAndSetFMUstate="false"
+		canSerializeFMUstate="false"
+		providesDirectionalDerivative="false"				
+	/>
+
+	<ModelVariables>
+		<!-- ---------------------------------------------------------
+									Parameters
+			 --------------------------------------------------------- -->
+
+		<ScalarVariable
+			name="config_path"
+			valueReference="1000000"
+			description="Path to the VILLASnode configuration file"
+			causality="parameter"
+			variability="fixed"
+		>
+			<String start="/etc/villas/node.conf"/>
+		</ScalarVariable>
+
+		<ScalarVariable
+			name="node_name"
+			valueReference="1000001"
+			description="Name of the node which this FMU should interface"
+			causality="parameter"
+			variability="fixed"
+		>
+			<String start="node1"/>
+		</ScalarVariable>
+		<ScalarVariable
+			name="sync_mode"
+			valueReference="1000002"
+			description="Synchronization mode"
+			causality="parameter"
+			variability="fixed"
+		>
+			<Enumeration start="0">
+				<Item name="Unsynchronized" value="0" />
+				<Item name="Synchronized" value="0" />
+			</Enumeration>
+		</ScalarVariable>
+
+		<!-- ---------------------------------------------------------
+						Outputs (VILLASnode to FMI master)
+			 --------------------------------------------------------- -->
+
+		<ScalarVariable
+			name="out.sequence"
+			valueReference="1000003"
+			description="Sequence number of the last received sampled"
+			causality="output"
+			variability="fixed"
+		>
+			<Integer/>
+		</ScalarVariable>
+
+		<ScalarVariable
+			name="out.ts.origin.sec"
+			valueReference="1000004"
+			description="Timestamp when last sample was generated (seconds)"
+			causality="output"
+			variability="fixed"
+		>
+			<Integer/>
+		</ScalarVariable>
+
+		<ScalarVariable
+			name="out.ts.origin.nsec"
+			valueReference="1000005"
+			description="Timestamp when last sample was generated (nanoseconds)"
+			causality="output"
+			variability="fixed"
+		>
+			<Integer/>
+		</ScalarVariable>
+
+		<ScalarVariable
+			name="out.ts.received.sec"
+			valueReference="1000006"
+			description="Timestamp when last sample was received (seconds)"
+			causality="output"
+			variability="fixed"
+		>
+			<Integer/>
+		</ScalarVariable>
+
+		<ScalarVariable
+			name="out.ts.received.nsec"
+			valueReference="1000007"
+			description="Timestamp when last sample was received (seconds)"
+			causality="output"
+			variability="fixed"
+		>
+			<Integer/>
+		</ScalarVariable>
+
+		<!--
+			The number and data type of outputs can be adjusted by the user.
+			Value References for outputs start at offset 2000000.
+		-->
+		<ScalarVariable name="out.data[0]" valueReference="2000000" description="DataOut[0]" causality="output" variability="discrete"><Real /></ScalarVariable>
+		<ScalarVariable name="out.data[1]" valueReference="2000001" description="DataOut[1]" causality="output" variability="discrete"><Real /></ScalarVariable>
+		<ScalarVariable name="out.data[2]" valueReference="2000002" description="DataOut[2]" causality="output" variability="discrete"><Real /></ScalarVariable>
+		<ScalarVariable name="out.data[3]" valueReference="2000003" description="DataOut[3]" causality="output" variability="discrete"><Real /></ScalarVariable>
+		<!--
+		<ScalarVariable name="out.data[4]" valueReference="2000004" description="DataOut[4]" causality="output" variability="discrete"><Real /></ScalarVariable>
+		<ScalarVariable name="out.data[5]" valueReference="2000005" description="DataOut[5]" causality="output" variability="discrete"><Real /></ScalarVariable>
+		<ScalarVariable name="out.data[6]" valueReference="2000006" description="DataOut[6]" causality="output" variability="discrete"><Real /></ScalarVariable>
+		<ScalarVariable name="out.data[7]" valueReference="2000007" description="DataOut[7]" causality="output" variability="discrete"><Real /></ScalarVariable>
+		-->
+
+		<!-- --------------------------------------------------------- 
+						Inputs (FMI master to VILLASnode)
+			 --------------------------------------------------------- -->
+
+		<!--
+			The number and data type of inputs can be adjusted by the user.
+			Value References for inputs start at offset 3000000.
+		-->
+		<ScalarVariable name="in.data[0]" valueReference="3000000" description="DataIn[0]" causality="input" variability="discrete"><Real /></ScalarVariable>
+		<ScalarVariable name="in.data[1]" valueReference="3000001" description="DataIn[1]" causality="input" variability="discrete"><Real /></ScalarVariable>
+		<ScalarVariable name="in.data[2]" valueReference="3000002" description="DataIn[2]" causality="input" variability="discrete"><Real /></ScalarVariable>
+		<ScalarVariable name="in.data[3]" valueReference="3000003" description="DataIn[3]" causality="input" variability="discrete"><Real /></ScalarVariable>
+		<!--
+		<ScalarVariable name="in.data[4]" valueReference="3000004" description="DataIn[4]" causality="input" variability="discrete"><Real /></ScalarVariable>
+		<ScalarVariable name="in.data[5]" valueReference="3000005" description="DataIn[5]" causality="input" variability="discrete"><Real /></ScalarVariable>
+		<ScalarVariable name="in.data[6]" valueReference="3000006" description="DataIn[6]" causality="input" variability="discrete"><Real /></ScalarVariable>
+		<ScalarVariable name="in.data[7]" valueReference="3000007" description="DataIn[7]" causality="input" variability="discrete"><Real /></ScalarVariable>
+		-->
+	</ModelVariables>
+</fmiModelDescription>
