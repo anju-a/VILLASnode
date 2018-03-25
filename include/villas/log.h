@@ -94,6 +94,8 @@ struct log {
 	struct winsize window;	/**< Size of the terminal window. */
 	int width;		/**< The real usable log output width which fits into one line. */
 
+	log_cb_t callback; /**< A callback to customize the log output. */
+
 	/** Debug level used by the debug() macro.
 	 * It defaults to V (defined by the Makefile) and can be
 	 * overwritten by the 'debug' setting in the configuration file. */
@@ -105,6 +107,8 @@ struct log {
 
 	FILE *file;		/**< Send all log output to this file / stdout / stderr. */
 };
+
+typedef void (*log_cb_t)(struct log *l, int indent, const char *fmt, ...)
 
 /** The global log instance. */
 struct log *global_log;
@@ -149,6 +153,15 @@ void log_outdent(int *);
  * @return The new facilties mask (see enum log_faciltities)
  */
 int log_set_facility_expression(struct log *l, const char *expression);
+
+/** Register a logging callback.
+ * 
+ * The registered function is called for every line of log output.
+ */
+void log_register_callback(struct log *l, log_cb_t cb);
+
+/** Register a logging callback. */
+void log_unregister_callback(struct log *l);
 
 /** Logs variadic messages to stdout.
  *

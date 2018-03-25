@@ -138,6 +138,7 @@ int log_init(struct log *l, int level, long facilitites)
 	l->facilities = facilitites;
 	l->file = stderr;
 	l->path = NULL;
+	l->callback = NULL;
 
 	l->epoch = time_now();
 	l->prefix = getenv("VILLAS_LOG_PREFIX");
@@ -273,6 +274,16 @@ found:		if (negate)
 	free(copy);
 
 	return l->facilities;
+}
+
+void log_register_callback(struct log *l, log_cb_t cb)
+{
+	l->callback = cb;
+}
+
+void log_unregister_callback(struct log *l)
+{
+	l->callback = NULL;
 }
 
 void log_print(struct log *l, const char *lvl, const char *fmt, ...)
