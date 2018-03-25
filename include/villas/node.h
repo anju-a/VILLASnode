@@ -26,8 +26,6 @@
 
 #pragma once
 
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <jansson.h>
 
 #include "node_type.h"
