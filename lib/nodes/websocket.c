@@ -400,7 +400,7 @@ int websocket_start(struct node *n)
 
 		struct format_type *fmt;
 
-		fmt = format_type_lookup("villas-web"); /** @todo We could parse the format from the URI */
+		fmt = format_type_lookup("villas.web"); /** @todo We could parse the format from the URI */
 		if (!fmt)
 			return -1;
 
