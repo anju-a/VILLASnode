@@ -5,7 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.6.2] - Unreleased
+## [0.6.4] - Unreleased
+
+### Added
+
+- A new sub-command `villas-relay` implements a client-to-client WebSocket relay.
+  It can be used as a proxy for nodes which sit behind a NAT firewall.
+
+## [0.6.3] - 2018-06-04
+
+### Changed
+
+### Added
+
+### Fixed
+
+## [0.6.2] - 2018-03-14
 
 ### Changed
 
