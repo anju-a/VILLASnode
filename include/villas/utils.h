@@ -23,6 +23,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <sched.h>
@@ -275,3 +279,7 @@ pid_t spawn(const char *name, char *const argv[]);
 
 /** Determines the string length as printed on the screen (ignores escable sequences). */
 size_t strlenp(const char *str);
+
+#ifdef __cplusplus
+}
+#endif
