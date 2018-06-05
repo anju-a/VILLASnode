@@ -71,8 +71,12 @@ LDLIBS   =
 CFLAGS  += -std=c11 -MMD -mcx16 -I$(BUILDDIR)/include -I$(SRCDIR)/include
 CFLAGS  += -Wall -Werror -fdiagnostics-color=auto -D_POSIX_C_SOURCE=200809L -D_GNU_SOURCE=1
 
+CXXFLAGS  += -std=c++11 -MMD -mcx16 -I$(BUILDDIR)/include -I$(SRCDIR)/include
+CXXFLAGS += -Wall -Werror -fdiagnostics-color=auto -D_POSIX_C_SOURCE=200809L -D_GNU_SOURCE=1
+
 ifeq ($(PLATFORM),Darwin)
-	CFLAGS += -D_DARWIN_C_SOURCE
+	CFLAGS   += -D_DARWIN_C_SOURCE
+	CXXFLAGS += -D_DARWIN_C_SOURCE
 endif
 
 LDFLAGS += -L$(BUILDDIR)
@@ -86,14 +90,17 @@ SHELL := bash
 # We must compile without optimizations for gcov!
 ifdef DEBUG
 	CFLAGS += -O0 -g
+	CXXFLAGS += -O0 -g
 	VARIANTS += debug
 else
 	CFLAGS += -O3
+	CXXFLAGS += -O3
 	VARIANTS += release
 endif
 
 ifdef PROFILE
 	CFLAGS += -pg
+	CXXFLAGS += -pg
 	LDFLAGS += -pg
 
 	VARIANTS += profile
@@ -101,6 +108,7 @@ endif
 
 ifdef COVERAGE
 	CFLAGS  += --coverage
+	CXXFLAGS  += --coverage
 	LDLIBS += -lgcov
 
 	VARIANTS += coverage
@@ -152,6 +160,7 @@ endif
 
 # Add flags by pkg-config
 CFLAGS += $(shell $(PKGCONFIG) --cflags ${PKGS})
+CXXFLAGS += $(shell $(PKGCONFIG) --cflags ${PKGS})
 LDLIBS += $(shell $(PKGCONFIG) --libs ${PKGS})
 
 all:                          $(filter-out $(MODULES_EXCLUDE),$(MODULES))

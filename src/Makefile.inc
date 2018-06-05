@@ -38,6 +38,7 @@ endif
 
 SRC_LDLIBS = $(LDLIBS) -pthread -lm -lvillas
 SRC_CFLAGS = $(CFLAGS)
+SRC_CXXFLAGS = $(CXXFLAGS)
 SRC_LDFLAGS = $(LDFLAGS) -Wl,-rpath,'$$ORIGIN'
 
 src: $(TARGETS)
@@ -47,6 +48,9 @@ $(TARGETS): $(BUILDDIR)/villas-%: $(BUILDDIR)/src/%.o
 # Compile executable objects
 $(BUILDDIR)/src/%.o: src/%.c | $$(dir $$@)
 	$(CC) $(SRC_CFLAGS) -c $< -o $@
+
+$(BUILDDIR)/src/%.o: src/%.cpp | $$(dir $$@)
+	$(CXX) $(SRC_CXXFLAGS) -c $< -o $@
 
 # Build villas-shmem only with libvillas-ext (to ensure that libext contains everything needed)
 $(BUILDDIR)/villas-shmem: $(BUILDDIR)/src/shmem.o libvillas-ext

@@ -25,6 +25,7 @@ SONAMES = villas villas-ext
 LIBS = $(patsubst %, lib%, $(SONAMES))
 
 LIB_CFLAGS  += $(CFLAGS) -fPIC
+LIB_CXXFLAGS += $(CXXFLAGS) -fPIC
 
 include $(patsubst %, lib/Makefile.%.inc, $(SONAMES))
 
