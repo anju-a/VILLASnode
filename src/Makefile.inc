@@ -26,6 +26,10 @@ TARGETS = $(BUILDDIR)/villas-node \
 	  $(BUILDDIR)/villas-test-shmem \
 	  $(BUILDDIR)/villas-convert
 
+ifeq ($(WITH_WEB),1)
+	TARGETS += $(BUILDDIR)/villas-relay
+endif
+
 ifeq ($(WITH_IO),1)
 	ifeq ($(WITH_HOOKS),1)
 		TARGETS += $(BUILDDIR)/villas-hook
@@ -51,6 +55,8 @@ $(BUILDDIR)/src/%.o: src/%.c | $$(dir $$@)
 
 $(BUILDDIR)/src/%.o: src/%.cpp | $$(dir $$@)
 	$(CXX) $(SRC_CXXFLAGS) -c $< -o $@
+
+$(BUILDDIR)/villas-relay: SRC_LDLIBS+=$(shell $(PKGCONFIG) --libs libwebsockets) -lstdc++
 
 # Build villas-shmem only with libvillas-ext (to ensure that libext contains everything needed)
 $(BUILDDIR)/villas-shmem: $(BUILDDIR)/src/shmem.o libvillas-ext
