@@ -36,8 +36,8 @@ ifeq ($(WITH_IO),1)
 	endif
 
 	TARGETS += $(BUILDDIR)/villas-pipe \
-	  $(BUILDDIR)/villas-signal \
-		$(BUILDDIR)/villas-test-cmp
+	           $(BUILDDIR)/villas-signal \
+	           $(BUILDDIR)/villas-test-cmp
 endif
 
 SRC_LDLIBS = $(LDLIBS) -pthread -lm -lvillas
