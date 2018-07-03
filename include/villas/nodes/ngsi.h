@@ -39,7 +39,6 @@
 #include <jansson.h>
 
 #include <villas/list.h>
-#include <villas/super_node.h>
 #include <villas/node.h>
 #include <villas/task.h>
 
@@ -47,6 +46,8 @@
 extern "C" {
 #endif
 
+/* Forward declarations */
+struct super_node;
 struct node;
 
 struct ngsi {

@@ -24,12 +24,11 @@
 
 #include <villas/sample.h>
 #include <villas/node.h>
-#include <villas/super_node.h>
 #include <villas/utils.h>
 #include <villas/config.h>
 #include <villas/plugin.h>
 
-int node_type_start(struct node_type *vt, struct super_node *sn)
+int node_type_start(struct node_type *vt)//, struct super_node *sn) // @todo: port to C++
 {
 	int ret;
 
@@ -38,7 +37,7 @@ int node_type_start(struct node_type *vt, struct super_node *sn)
 
 	info("Initializing " CLR_YEL("%s") " node type which is used by %zu nodes", node_type_name(vt), list_length(&vt->instances));
 	{ INDENT
-		ret = vt->init ? vt->init(sn) : 0;
+		ret = vt->init ? vt->init() : 0;//sn) : 0; // @todo: port to C++
 	}
 
 	if (ret == 0)

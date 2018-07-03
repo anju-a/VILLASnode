@@ -27,14 +27,16 @@
 #include <villas/api.h>
 #include <villas/web.h>
 #include <villas/log.h>
+#include <villas/node.h>
 #include <villas/common.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace villas {
+namespace node {
 
 /** Global configuration */
-struct super_node {
+class SuperNode {
+
+protected:
 	int priority;		/**< Process priority (lower is better) */
 	int affinity;		/**< Process affinity of the server and all created threads */
 	int hugepages;		/**< Number of hugepages to reserve. */
@@ -54,7 +56,42 @@ struct super_node {
 
 	char *uri;		/**< URI of configuration */
 
-	json_t *cfg;		/**< JSON representation of the configuration. */
+	json_t *json;		/**< JSON representation of the configuration. */
+
+public:
+	/** Inititalize configuration object before parsing the configuration. */
+	SuperNode();
+
+	int init();
+
+	/** Wrapper for super_node_parse() */
+	int parseUri(const char *uri);
+
+	/** Parse super-node configuration.
+	 *
+	 * @param cfg A libjansson object which contains the configuration.
+	 * @retval 0 Success. Everything went well.
+	 * @retval <0 Error. Something went wrong.
+	 */
+	int parseJson(json_t *cfg);
+
+	/** Check validity of super node configuration. */
+	int check();
+
+	/** Initialize after parsing the configuration file. */
+	int start();
+	int stop();
+	void run();
+
+	struct node * getNode(const char *name) { return (struct node *) list_lookup(&nodes, name); }
+
+	struct list * getNodes() { return &nodes; }
+	struct list * getPaths() { return &paths; }
+	struct web * getWeb() { return &web; }
+	struct api * getApi() { return &api; }
+
+	/** Desctroy configuration object. */
+	~SuperNode();
 };
 
 /* Compatibility with libconfig < 1.5 */
@@ -62,32 +99,5 @@ struct super_node {
   #define config_setting_lookup config_lookup_from
 #endif
 
-/** Inititalize configuration object before parsing the configuration. */
-int super_node_init(struct super_node *sn);
-
-/** Wrapper for super_node_parse() */
-int super_node_parse_uri(struct super_node *sn, const char *uri);
-
-/** Parse super-node configuration.
- *
- * @param sn The super-node datastructure to fill.
- * @param cfg A libconfig setting object.
- * @retval 0 Success. Everything went well.
- * @retval <0 Error. Something went wrong.
- */
-int super_node_parse_json(struct super_node *sn, json_t *cfg);
-
-/** Check validity of super node configuration. */
-int super_node_check(struct super_node *sn);
-
-/** Initialize after parsing the configuration file. */
-int super_node_start(struct super_node *sn);
-
-int super_node_stop(struct super_node *sn);
-
-/** Desctroy configuration object. */
-int super_node_destroy(struct super_node *sn);
-
-#ifdef __cplusplus
-}
-#endif
+} // node
+} // villas

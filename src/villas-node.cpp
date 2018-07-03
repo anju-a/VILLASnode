@@ -45,22 +45,17 @@
   #include <villas/nodes/opal.h>
 #endif
 
-struct super_node sn;
+using namespace villas::node;
+
+SuperNode sn;
 
 static void quit(int signal, siginfo_t *sinfo, void *ctx)
 {
 	int ret;
 
-	if (sn.stats > 0)
-		stats_print_footer(STATS_FORMAT_HUMAN);
-
-	ret = super_node_stop(&sn);
+	ret = sn.stop();
 	if (ret)
 		error("Failed to stop super node");
-
-	ret = super_node_destroy(&sn);
-	if (ret)
-		error("Failed to destroy super node");
 
 	info(CLR_GRN("Goodbye!"));
 	exit(EXIT_SUCCESS);
@@ -149,71 +144,23 @@ int main(int argc, char *argv[])
 	if (ret)
 		error("Failed to initialize signal subsystem");
 
-	ret = super_node_init(&sn);
-	if (ret)
-		error("Failed to initialize super node");
-
-	ret = super_node_parse_uri(&sn, uri);
+	ret = sn.parseUri(uri);
 	if (ret)
 		error("Failed to parse command line arguments");
 
-	ret = super_node_check(&sn);
+	ret = sn.init();
+	if (ret)
+		error("Failed to initialize super node");
+
+	ret = sn.check();
 	if (ret)
 		error("Failed to verify configuration");
 
-	ret = super_node_start(&sn);
+	ret = sn.start();
 	if (ret)
 		error("Failed to start super node");
 
-#ifdef WITH_HOOKS
-	if (sn.stats > 0) {
-		stats_print_header(STATS_FORMAT_HUMAN);
-
-		struct task t;
-
-		ret = task_init(&t, 1.0 / sn.stats, CLOCK_REALTIME);
-		if (ret)
-			error("Failed to create stats timer");
-
-		for (;;) {
-			task_wait(&t);
-
-			for (size_t i = 0; i < list_length(&sn.paths); i++) {
-				struct path *p = (struct path *) list_at(&sn.paths, i);
-
-				if (p->state != STATE_STARTED)
-					continue;
-
-				for (size_t j = 0; j < list_length(&p->hooks); j++) {
-					struct hook *h = (struct hook *) list_at(&p->hooks, j);
-
-					hook_periodic(h);
-				}
-			}
-
-			for (size_t i = 0; i < list_length(&sn.nodes); i++) {
-				struct node *n = (struct node *) list_at(&sn.nodes, i);
-
-				if (n->state != STATE_STARTED)
-					continue;
-
-				for (size_t j = 0; j < list_length(&n->in.hooks); j++) {
-					struct hook *h = (struct hook *) list_at(&n->in.hooks, j);
-
-					hook_periodic(h);
-				}
-
-				for (size_t j = 0; j < list_length(&n->out.hooks); j++) {
-					struct hook *h = (struct hook *) list_at(&n->out.hooks, j);
-
-					hook_periodic(h);
-				}
-			}
-		}
-	}
-	else
-#endif /* WITH_HOOKS */
-		for (;;) pause();
+	sn.run();
 
 	return 0;
 }

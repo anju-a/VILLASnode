@@ -32,12 +32,13 @@ set(LIBRARIES
 set(API_SRC
     session.c
     actions/capabiltities.c
-    actions/config.c
-    actions/nodes.c
-    actions/paths.c
-    actions/restart.c
     actions/shutdown.c
     actions/status.c
+# @todo: port to C++
+#    actions/config.c
+#    actions/nodes.c
+#    actions/paths.c
+#    actions/restart.c
 )
 
 add_library(api STATIC ${API_SRC})

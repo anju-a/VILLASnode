@@ -44,7 +44,9 @@
 
 #include <villas/nodes/websocket.h>
 
-static struct super_node sn = { .state = STATE_DESTROYED }; /**< The global configuration */
+using namespace villas::node;
+
+static SuperNode sn; /**< The global configuration */
 static struct io io = { .state = STATE_DESTROYED };
 
 static struct dir {
@@ -73,7 +75,7 @@ static void quit(int signal, siginfo_t *sinfo, void *ctx)
 		pthread_join(sendd.thread, NULL);
 	}
 
-	ret = super_node_stop(&sn);
+	ret = sn.stop();
 	if (ret)
 		error("Failed to stop super node");
 
@@ -88,10 +90,6 @@ static void quit(int signal, siginfo_t *sinfo, void *ctx)
 		if (ret)
 			error("Failed to destroy pool");
 	}
-
-	ret = super_node_destroy(&sn);
-	if (ret)
-		error("Failed to destroy super node");
 
 	ret = io_close(&io);
 	if (ret)
@@ -112,7 +110,6 @@ static void usage()
 	std::cout << "  NODE    the name of the node to which samples are sent and received from" << std::endl;
 	std::cout << "  OPTIONS are:" << std::endl;
 	std::cout << "    -f FMT           set the format" << std::endl;
-	std::cout << "    -d LVL           set debug log level to LVL" << std::endl;
 	std::cout << "    -o OPTION=VALUE  overwrite options in config file" << std::endl;
 	std::cout << "    -x               swap read / write endpoints" << std::endl;
 	std::cout << "    -s               only read data from stdin and send it to node" << std::endl;
@@ -231,7 +228,7 @@ leave:	info("Reached receive limit. Terminating...");
 
 int main(int argc, char *argv[])
 {
-	int ret, level = V, timeout = 0;
+	int ret, timeout = 0;
 	bool reverse = false;
 	const char *format = "villas.human";
 
@@ -261,9 +258,6 @@ int main(int argc, char *argv[])
 			case 'r':
 				sendd.enabled = false; // receive only
 				break;
-			case 'd':
-				level = strtoul(optarg, &endptr, 10);
-				goto check;
 			case 'l':
 				recvv.limit = strtoul(optarg, &endptr, 10);
 				goto check;
@@ -299,33 +293,17 @@ check:		if (optarg == endptr)
 	char *nodestr    = argv[optind+1];
 	struct format_type *fmt;
 
-	ret = log_init(&sn.log, level, LOG_ALL);
-	if (ret)
-		error("Failed to initialize log");
-
-	ret = log_open(&sn.log);
-	if (ret)
-		error("Failed to start log");
-
 	ret = signals_init(quit);
 	if (ret)
 		error("Failed to initialize signals");
 
-	ret = super_node_init(&sn);
-	if (ret)
-		error("Failed to initialize super-node");
-
-	ret = super_node_parse_uri(&sn, configfile);
+	ret = sn.parseUri(configfile);
 	if (ret)
 		error("Failed to parse configuration");
 
-	ret = memory_init(sn.hugepages);
+	ret = sn.init();
 	if (ret)
-		error("Failed to initialize memory");
-
-	ret = rt_init(sn.priority, sn.affinity);
-	if (ret)
-		error("Failed to initalize real-time");
+		error("Failed to initialize super-node");
 
 	fmt = format_type_lookup(format);
 	if (!fmt)
@@ -339,22 +317,22 @@ check:		if (optarg == endptr)
 	if (ret)
 		error("Failed to open IO");
 
-	node = (struct node *) list_lookup(&sn.nodes, nodestr);
+	node = sn.getNode(nodestr);
 	if (!node)
 		error("Node '%s' does not exist!", nodestr);
 
 #ifdef LIBWEBSOCKETS_FOUND
 	/* Only start web subsystem if villas-pipe is used with a websocket node */
 	if (node->_vt->start == websocket_start) {
-		web_start(&sn.web);
-		api_start(&sn.api);
+		web_start(&sn.getWeb());
+		api_start(&sn.getApi());
 	}
 #endif /* LIBWEBSOCKETS_FOUND */
 
 	if (reverse)
 		node_reverse(node);
 
-	ret = node_type_start(node->_vt, &sn);
+	ret = node_type_start(node->_vt);//, &sn); // @todo: port to C++
 	if (ret)
 		error("Failed to intialize node type: %s", node_type_name(node->_vt));
 

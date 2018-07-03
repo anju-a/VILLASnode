@@ -37,7 +37,9 @@
 #include <villas/pool.h>
 #include <villas/kernel/rt.h>
 
-struct super_node sn; /** <The global configuration */
+using namespace villas::node;
+
+SuperNode sn; /** <The global configuration */
 
 static struct node *node;
 
@@ -83,6 +85,8 @@ void usage()
 
 int main(int argc, char *argv[])
 {
+	int ret;
+
 	/* Parse Arguments */
 	char c, *endptr;
 	while ((c = getopt (argc, argv, "w:h:r:f:c:b:V")) != -1) {
@@ -111,7 +115,7 @@ int main(int argc, char *argv[])
 		continue;
 
 check:		if (optarg == endptr)
-			error("Failed to parse parse option argument '-%c %s'", c, optarg);
+				error("Failed to parse parse option argument '-%c %s'", c, optarg);
 	}
 
 	if (argc != optind + 2) {
@@ -122,28 +126,39 @@ check:		if (optarg == endptr)
 	char *configfile = argv[optind];
 	char *nodestr    = argv[optind + 1];
 
-	log_init(&sn.log, V, LOG_ALL);
+	ret = signals_init(quit);
+	if (ret)
+		error("Failed to initialize signals subsystem");
 
-	super_node_init(&sn);
-	super_node_parse_uri(&sn, configfile);
+	ret = sn.parseUri(configfile);
+	if (ret)
+		error("Failed to parse configuration");
 
-	signals_init(quit);
-	rt_init(sn.priority, sn.affinity);
-	memory_init(sn.hugepages);
+	ret = sn.init();
+	if (ret)
+		error("Initialization failed!");
 
-	node = (struct node *) list_lookup(&sn.nodes, nodestr);
+	node = sn.getNode(nodestr);
 	if (!node)
 		error("There's no node with the name '%s'", nodestr);
 
-	node_type_start(node->_vt, &sn);
-	node_start(node);
+	ret = node_type_start(node->_vt);//, &sn); // @todo: port to C++
+	if (ret)
+		error("Failed to intialize node-type");
+
+	ret = node_start(node);
+	if (ret)
+		error("Failed to start node");
 
 	test_rtt();
 
-	node_stop(node);
-	node_type_stop(node->_vt);
+	ret = node_stop(node);
+	if (ret)
+		error("Failed to stop node");
 
-	super_node_destroy(&sn);
+	ret = node_type_stop(node->_vt);
+	if (ret)
+		error("Failed to de-initialize node-type");
 
 	return 0;
 }

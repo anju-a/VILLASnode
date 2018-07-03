@@ -58,7 +58,7 @@ struct api {
 
 	struct list sessions;		/**< List of currently active connections */
 	struct queue_signalled pending;	/**< A queue of api_sessions which have pending requests. */
-	
+
 	pthread_t thread;
 
 	struct super_node *super_node;
@@ -73,7 +73,7 @@ struct api_action {
  *
  * Save references to list of paths / nodes for command execution.
  */
-int api_init(struct api *a, struct super_node *sn);
+int api_init(struct api *a);//, struct super_node *sn); // @todo: port to C++
 
 int api_destroy(struct api *a);
 

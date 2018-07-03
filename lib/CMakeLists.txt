@@ -35,6 +35,7 @@ set(LIBRARIES
 )
 
 set(LIB_SRC
+    super_node.cpp
     kernel/kernel.c
     kernel/rt.c
     sample.c
@@ -43,7 +44,6 @@ set(LIB_SRC
     log.c
     log_config.c
     utils.c
-    super_node.c
     hist.c
     timing.c
     pool.c
