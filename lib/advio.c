@@ -236,8 +236,12 @@ AFILE * afopen(const char *uri, const char *mode)
 	curl_easy_setopt(af->curl, CURLOPT_DEBUGFUNCTION, advio_trace);
 	curl_easy_setopt(af->curl, CURLOPT_VERBOSE, 1);
 
-	curl_easy_setopt(af->curl, CURLOPT_XFERINFOFUNCTION, advio_xferinfo);
-	curl_easy_setopt(af->curl, CURLOPT_XFERINFODATA, af);
+	//sko: changed the following line because the curl version for CENTOS7 (swarm cluster) is < 7.32.0
+        //curl_easy_setopt(af->curl, CURLOPT_XFERINFOFUNCTION, advio_xferinfo);
+        curl_easy_setopt(af->curl, CURLOPT_PROGRESSFUNCTION, advio_xferinfo);
+        //sko: commented the following line because the curl version of CENTOS7 (swarm cluster) is < 7.32.0
+        //curl_easy_setopt(af->curl, CURLOPT_XFERINFODATA, af);
+
 
 	ret = adownload(af, 0);
 	if (ret)
