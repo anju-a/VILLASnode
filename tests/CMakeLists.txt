@@ -33,6 +33,7 @@ add_custom_target(run-tests
 
 set(VALGRIND "valgrind --leak-check=full --show-leak-kinds=all --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp")
 
+if(WITH_HOOKS)
 add_custom_target(run-valgrind
 	COMMAND ${VALGRIND} $<TARGET_FILE:villas-node> & sleep 2; kill %1
 	COMMAND ${VALGRIND} $<TARGET_FILE:villas-pipe> -t 2 ${CMAKE_SOURCE_DIR}/etc/websocket-loopback.conf ws1
@@ -40,3 +41,4 @@ add_custom_target(run-valgrind
 	COMMAND ${VALGRIND} $<TARGET_FILE:villas-hook> stats < <($<TARGET_FILE:villas-signal> mixed -l 5)
 	DEPENDS villas-node villas-pipe villas-signal villas-hook
 )
+endif()
