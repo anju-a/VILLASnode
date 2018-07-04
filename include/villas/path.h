@@ -29,6 +29,8 @@
 
 #pragma once
 
+#include <list>
+
 #include <pthread.h>
 #include <jansson.h>
 
@@ -41,41 +43,55 @@
 #include <villas/mapping.h>
 #include <villas/task.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* Forward declarations */
 struct stats;
 struct node;
-struct super_node;
 
-struct path_source {
+class PathSource {
+
+public:
 	struct node *node;
 
 	bool masked;
 
 	struct pool pool;
 	struct list mappings;			/**< List of mappings (struct mapping_entry). */
+
+	PathSource();
+	~PathSource();
 };
 
-struct path_destination {
+class PathDestination {
+
+public:
 	struct node *node;
 
 	struct queue queue;
-};
 
-/** The register mode determines under which condition the path is triggered. */
-enum path_mode {
-	PATH_MODE_ANY,				/**< The path is triggered whenever one of the sources receives samples. */
-	PATH_MODE_ALL				/**< The path is triggered only after all sources have received at least 1 sample. */
+	void write();
+
+	PathDestination(int queuelen);
+	~PathDestination();
 };
 
 /** The datastructure for a path. */
-struct path {
-	enum state state;			/**< Path state. */
+class Path {
 
-	enum path_mode mode;		/**< Determines when this path is triggered. */
+protected:
+	int initPoll();
+	void enqueue(struct sample *smps[], unsigned cnt);
+
+	/* Thread functions */
+	void runSingle();
+	void runPoll();
+
+	enum state state;		/**< Path state. */
+
+	/** The register mode determines under which condition the path is triggered. */
+	enum mode {
+		ANY,			/**< The path is triggered whenever one of the sources receives samples. */
+		ALL			/**< The path is triggered only after all sources have received at least 1 sample. */
+	} mode;				/**< Determines when this path is triggered. */
 
 	struct {
 		int nfds;
@@ -86,8 +102,9 @@ struct path {
 	struct sample *last_sample;
 	int last_sequence;
 
-	struct list sources;		/**< List of all incoming nodes (struct path_source). */
-	struct list destinations;	/**< List of all outgoing nodes (struct path_destination). */
+	std::list<PathSource *> sources;	/**< List of all incoming nodes (struct path_source). */
+	std::list<PathDestination *> destinations; /**< List of all outgoing nodes (struct path_destination). */
+
 	struct list hooks;		/**< List of processing hooks (struct hook). */
 
 	struct task timeout;
@@ -107,73 +124,60 @@ struct path {
 
 	pthread_t tid;			/**< The thread id for this path. */
 	json_t *cfg;			/**< A JSON object containing the configuration of the path. */
+
+public:
+	Path();
+
+	/** Initialize internal data structures. */
+	int init();
+
+	/** Check if path configuration is proper. */
+	int check();
+
+	/** Start a path.
+	 *
+	 * Start a new pthread for receiving/sending messages over this path.
+	 *
+	 * @retval 0 Success. Everything went well.
+	 * @retval <0 Error. Something went wrong.
+	 */
+	int start();
+
+	/** Stop a path.
+	 *
+	 * @retval 0 Success. Everything went well.
+	 * @retval <0 Error. Something went wrong.
+	 */
+	int stop();
+
+	/** Destroy path by freeing dynamically allocated memory. */
+	~Path();
+
+	/** Show some basic statistics for a path. */
+	void printStats();
+
+	/** Fills the provided buffer with a string representation of the path.
+	 *
+	 * Format: source => [ dest1 dest2 dest3 ]
+	 *
+	 * @return A pointer to a string containing a textual representation of the path.
+	 */
+	const char * getName();
+
+	/** Reverse a path */
+	Path reverse();
+
+	/** Check if node is used as source or destination of a path. */
+	int usesNode(struct node *n);
+
+	/** Parse a single path and add it to the global configuration.
+	 *
+	 * @param cfg A JSON object containing the configuration of the path.
+	 * @param nodes A linked list of all existing nodes
+	 * @retval 0 Success. Everything went well.
+	 * @retval <0 Error. Something went wrong.
+	 */
+	int parseJson(json_t *cfg, struct list *nodes);
 };
 
-/** Initialize internal data structures. */
-int path_init(struct path *p);
-
-int path_init2(struct path *p);
-
-/** Check if path configuration is proper. */
-int path_check(struct path *p);
-
-/** Start a path.
- *
- * Start a new pthread for receiving/sending messages over this path.
- *
- * @param p A pointer to the path structure.
- * @retval 0 Success. Everything went well.
- * @retval <0 Error. Something went wrong.
- */
-int path_start(struct path *p);
-
-/** Stop a path.
- *
- * @param p A pointer to the path structure.
- * @retval 0 Success. Everything went well.
- * @retval <0 Error. Something went wrong.
- */
-int path_stop(struct path *p);
-
-/** Destroy path by freeing dynamically allocated memory.
- *
- * @param i A pointer to the path structure.
- */
-int path_destroy(struct path *p);
-
-/** Show some basic statistics for a path.
- *
- * @param p A pointer to the path structure.
- */
-void path_print_stats(struct path *p);
-
-/** Fills the provided buffer with a string representation of the path.
- *
- * Format: source => [ dest1 dest2 dest3 ]
- *
- * @param p A pointer to the path structure.
- * @return A pointer to a string containing a textual representation of the path.
- */
-const char * path_name(struct path *p);
-
-/** Reverse a path */
-int path_reverse(struct path *p, struct path *r);
-
-/** Check if node is used as source or destination of a path. */
-int path_uses_node(struct path *p, struct node *n);
-
-/** Parse a single path and add it to the global configuration.
- *
- * @param cfg A JSON object containing the configuration of the path.
- * @param p Pointer to the allocated memory for this path
- * @param nodes A linked list of all existing nodes
- * @retval 0 Success. Everything went well.
- * @retval <0 Error. Something went wrong.
- */
-int path_parse(struct path *p, json_t *cfg, struct list *nodes);
-
 /** @} */
-
-#ifdef __cplusplus
-}
-#endif
