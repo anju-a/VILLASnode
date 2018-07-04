@@ -70,24 +70,31 @@ check_include_file("sys/mman.h" HAS_MMAN)
 # Check packages
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
-find_package(Libwebsockets REQUIRED)
-find_package(OpenSSL REQUIRED)
-find_package(CURL REQUIRED)
+find_package(Libwebsockets 2.3.0 REQUIRED)
+find_package(OpenSSL 1.0.0 REQUIRED)
+find_package(CURL 7.29 REQUIRED)
+find_package(Mosquitto)
 find_package(Opal)
 
-set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:/usr/local/share/pkgconfig")
+# Check programs
+find_program(PROTOBUFC_COMPILER NAMES protoc-c)
+find_program(PROTOBUF_COMPILER NAMES protoc)
 
-pkg_check_modules(CRITERION IMPORTED_TARGET criterion)
-pkg_check_modules(JANSSON IMPORTED_TARGET REQUIRED jansson)
-pkg_check_modules(LIBNL3_ROUTE IMPORTED_TARGET libnl-route-3.0)
-pkg_check_modules(LIBIEC61850 IMPORTED_TARGET libiec61850>=1.2.0)
-pkg_check_modules(LIBCONFIG IMPORTED_TARGET libconfig)
-pkg_check_modules(RABBITMQ_C IMPORTED_TARGET librabbitmq)
-pkg_check_modules(COMEDILIB IMPORTED_TARGET comedilib)
-pkg_check_modules(LIBZMQ IMPORTED_TARGET libzmq)
+set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:/usr/local/share/pkgconfig:/usr/lib64/pkgconfig")
+
+pkg_check_modules(PROTOBUF IMPORTED_TARGET protobuf>=2.6.0)
+pkg_check_modules(PROTOBUFC IMPORTED_TARGET libprotobuf-c>=1.1.0)
+pkg_check_modules(CRITERION IMPORTED_TARGET criterion>=2.3.1)
+pkg_check_modules(JANSSON IMPORTED_TARGET REQUIRED jansson>=2.10)
+pkg_check_modules(LIBNL3_ROUTE IMPORTED_TARGET libnl-route-3.0>=3.2.28)
+pkg_check_modules(LIBIEC61850 IMPORTED_TARGET libiec61850>=1.2)
+pkg_check_modules(LIBCONFIG IMPORTED_TARGET libconfig>=1.4.9)
+pkg_check_modules(RABBITMQ_C IMPORTED_TARGET librabbitmq>=0.8.0)
+pkg_check_modules(COMEDILIB IMPORTED_TARGET comedilib>=0.11.0)
+pkg_check_modules(LIBZMQ IMPORTED_TARGET libzmq>=2.2.0)
 pkg_check_modules(NANOMSG IMPORTED_TARGET nanomsg)
 if(NOT NANOMSG_FOUND)
-    pkg_check_modules(NANOMSG IMPORTED_TARGET libnanomsg)
+    pkg_check_modules(NANOMSG IMPORTED_TARGET libnanomsg>=1.0.0)
 endif()
 
 # Build options
@@ -101,7 +108,6 @@ option(WITH_TESTS   "Run tests" ON)
 option(WITH_PLUGINS "Build plugins" ON)
 option(WITH_CLIENTS "Build client applications" ON)
 option(WITH_DOC     "Build documentation" ON)
-option(WITH_FORMAT_PROTOBUF "Build with format protobuf enabled" OFF)
 
 set(V 2)
 set(PREFIX ${CMAKE_INSTALL_PREFIX})
@@ -200,13 +206,6 @@ if(WITH_TESTS)
     add_subdirectory(tests)
 endif()
 
-if(WITH_FORMAT_PROTOBUF)
-    # Check programs
-    find_program(PROTOBUFC_COMPILER NAMES protoc-c)
-    find_program(PROTOBUF_COMPILER NAMES protoc)
-    pkg_check_modules(PROTOBUFC IMPORTED_TARGET libprotobuf-c)
-endif()
-
 configure_file(
     ${CMAKE_SOURCE_DIR}/include/villas/config.h.in
     ${CMAKE_BINARY_DIR}/include/villas/config.h
@@ -223,7 +222,6 @@ add_feature_info(TESTS   WITH_TESTS   "Run tests")
 add_feature_info(PLUGINS WITH_PLUGINS "Build plugins")
 add_feature_info(CLIENTS WITH_CLIENTS "Build client applications")
 add_feature_info(DOC     WITH_DOC     "Build documentation")
-add_feature_info(FORMAT_PROTOBUF WITH_FORMAT_PROTOBUF "Build with format protobuf")
 
 if(${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME})
     feature_summary(WHAT ALL VAR FEATURES)
