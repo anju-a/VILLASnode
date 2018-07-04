@@ -75,13 +75,8 @@ find_package(OpenSSL REQUIRED)
 find_package(CURL REQUIRED)
 find_package(Opal)
 
-# Check programs
-find_program(PROTOBUFC_COMPILER NAMES protoc-c)
-find_program(PROTOBUF_COMPILER NAMES protoc)
-
 set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:/usr/local/share/pkgconfig")
 
-pkg_check_modules(PROTOBUFC IMPORTED_TARGET libprotobuf-c)
 pkg_check_modules(CRITERION IMPORTED_TARGET criterion)
 pkg_check_modules(JANSSON IMPORTED_TARGET REQUIRED jansson)
 pkg_check_modules(LIBNL3_ROUTE IMPORTED_TARGET libnl-route-3.0)
@@ -106,6 +101,7 @@ option(WITH_TESTS   "Run tests" ON)
 option(WITH_PLUGINS "Build plugins" ON)
 option(WITH_CLIENTS "Build client applications" ON)
 option(WITH_DOC     "Build documentation" ON)
+option(WITH_FORMAT_PROTOBUF "Build with format protobuf enabled" OFF)
 
 set(V 2)
 set(PREFIX ${CMAKE_INSTALL_PREFIX})
@@ -204,6 +200,13 @@ if(WITH_TESTS)
     add_subdirectory(tests)
 endif()
 
+if(WITH_FORMAT_PROTOBUF)
+    # Check programs
+    find_program(PROTOBUFC_COMPILER NAMES protoc-c)
+    find_program(PROTOBUF_COMPILER NAMES protoc)
+    pkg_check_modules(PROTOBUFC IMPORTED_TARGET libprotobuf-c)
+endif()
+
 configure_file(
     ${CMAKE_SOURCE_DIR}/include/villas/config.h.in
     ${CMAKE_BINARY_DIR}/include/villas/config.h
@@ -220,6 +223,7 @@ add_feature_info(TESTS   WITH_TESTS   "Run tests")
 add_feature_info(PLUGINS WITH_PLUGINS "Build plugins")
 add_feature_info(CLIENTS WITH_CLIENTS "Build client applications")
 add_feature_info(DOC     WITH_DOC     "Build documentation")
+add_feature_info(FORMAT_PROTOBUF WITH_FORMAT_PROTOBUF "Build with format protobuf")
 
 if(${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME})
     feature_summary(WHAT ALL VAR FEATURES)
