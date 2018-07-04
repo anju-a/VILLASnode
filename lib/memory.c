@@ -132,9 +132,7 @@ static void * memory_hugepage_alloc(struct memtype *m, size_t len, size_t alignm
 #ifdef __MACH__
 	flags |= VM_FLAGS_SUPERPAGE_SIZE_2MB;
 #elif defined(__linux__)
-	//sko: mmap does not work with the flag MAP_HUGETLB set on my Ubuntu 16.04 system (kernel 4.13.0)
-	//sko: that's why I commented the following line
-	//flags |= MAP_HUGETLB;
+	flags |= MAP_HUGETLB;
 
 	if (getuid() == 0)
 		flags |= MAP_LOCKED;
@@ -149,9 +147,7 @@ static void * memory_hugepage_alloc(struct memtype *m, size_t len, size_t alignm
 
 static int memory_hugepage_free(struct memtype *m, void *ptr, size_t len)
 {
-	//sko: commented the next line because it prevented munmap to work on my Ubuntu 16.04 system (kernel 4.13.0)
-    //sko: this is correlated with my comment in the method memory_hugepage_alloc(...)
-    //len = ALIGN(len, HUGEPAGESIZE); /* ugly see: https://lkml.org/lkml/2015/3/27/171 */
+    len = ALIGN(len, HUGEPAGESIZE); /* ugly see: https://lkml.org/lkml/2015/3/27/171 */
 
 	return munmap(ptr, len);
 }
