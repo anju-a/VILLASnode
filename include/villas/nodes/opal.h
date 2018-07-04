@@ -31,8 +31,8 @@
 
 #include <pthread.h>
 
-#include "node.h"
-#include "msg.h"
+#include <villas/node.h>
+#include <villas/msg.h>
 
 /* Define RTLAB before including OpalPrint.h for messages to be sent
  * to the OpalDisplay. Otherwise stdout will be used. */
@@ -72,7 +72,7 @@ int opal_deinit();
 int opal_parse(struct node *n, json_t *cfg);
 
 /** @see node_type::print */
-char *opal_print(struct node *n);
+char * opal_print(struct node *n);
 
 /** Print global settings of the OPAL node type. */
 int opal_print_global();

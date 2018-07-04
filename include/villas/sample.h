@@ -21,11 +21,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *********************************************************************************/
 
-
-
 #pragma once
 
-#include "atomic.h"
+#include <villas/atomic.h>
 
 #include <stddef.h>
 #include <stdlib.h>

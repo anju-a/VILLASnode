@@ -21,13 +21,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *********************************************************************************/
 
-#ifndef _STATS_H_
-#define _STATS_H_
+#pragma once
 
 #include <stdint.h>
 #include <jansson.h>
 
-#include "hist.h"
+#include <villas/hist.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,19 +43,19 @@ enum stats_format {
 };
 
 enum stats_id {
-	STATS_SKIPPED,        /**< Counter for skipped samples due to hooks. */
-	STATS_TIME,        /**< The processing time per sample within VILLAsnode. */
-	STATS_REORDERED,    /**< Counter for reordered samples. */
-	STATS_GAP_SAMPLE,    /**< Histogram for inter sample timestamps (as sent by remote). */
-	STATS_GAP_RECEIVED,    /**< Histogram for inter sample arrival time (as seen by this instance). */
-	STATS_OWD,        /**< Histogram for one-way-delay (OWD) of received samples. */
-	STATS_COUNT        /**< Just here to have an updated number of statistics. */
+	STATS_SKIPPED,		/**< Counter for skipped samples due to hooks. */
+	STATS_TIME,		/**< The processing time per sample within VILLAsnode. */
+	STATS_REORDERED,	/**< Counter for reordered samples. */
+	STATS_GAP_SAMPLE,	/**< Histogram for inter sample timestamps (as sent by remote). */
+	STATS_GAP_RECEIVED,	/**< Histogram for inter sample arrival time (as seen by this instance). */
+	STATS_OWD,		/**< Histogram for one-way-delay (OWD) of received samples. */
+	STATS_COUNT		/**< Just here to have an updated number of statistics. */
 };
 
 struct stats_delta {
 	double values[STATS_COUNT];
 
-	int update;        /**< Bitmask of stats_id. Only those which are masked will be updated */
+	int update;		/**< Bitmask of stats_id. Only those which are masked will be updated */
 };
 
 struct stats {
@@ -77,12 +76,12 @@ void stats_collect(struct stats *s, struct sample *smps[], size_t cnt);
 
 int stats_commit(struct stats *s);
 
-json_t *stats_json(struct stats *s);
+json_t * stats_json(struct stats *s);
 
 void stats_reset(struct stats *s);
 
-void stats_print_header();
-void stats_print_footer();
+void stats_print_header(enum stats_format fmt);
+void stats_print_footer(enum stats_format fmt);
 
 void stats_print_periodic(struct stats *s, FILE *f, enum stats_format fmt, int verbose, struct node *p);
 
@@ -93,5 +92,3 @@ enum stats_id stats_lookup_id(const char *name);
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _STATS_H_ */
