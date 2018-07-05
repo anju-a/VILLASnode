@@ -78,6 +78,7 @@ find_package(CURL 7.29 REQUIRED)
 find_package(Mosquitto)
 find_package(Opal)
 find_package(IBVerbs)
+add_definitions(-DIBVERBS_FOUND=${IBVERBS_FOUND})
 find_package(RDMACM)
 
 # Check programs
