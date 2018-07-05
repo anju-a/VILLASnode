@@ -81,7 +81,9 @@ RUN dnf -y install \
 	libiec61850-devel \
 	librabbitmq-devel \
 	mosquitto-devel \
-	comedilib-devel comedilib
+	comedilib-devel comedilib \
+	libibverbs-devel \
+	librdmacm-devel
 
 # Build & Install Criterion
 RUN cd /tmp && \
